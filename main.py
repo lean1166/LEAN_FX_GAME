@@ -81,6 +81,13 @@ current_candle = {"open": candles[-1]["close"], "close": candles[-1]["close"], "
 buttons_active = False
 zone_time_left = 0.0
 active_trade = None
+TRADE_RISK = 100  # Cantidad que arriesgas por trade
+TP_MULTIPLIER = 2.0  # Risk:Reward 1:2
+SL_DISTANCE = 15.0  # Distancia del Stop Loss en puntos
+TP_DISTANCE = SL_DISTANCE * TP_MULTIPLIER  # Distancia del Take Profit
+trade_history = []
+font_btn = pygame.font.SysFont("Arial", 20, bold=True)
+font_trade = pygame.font.SysFont("Arial", 14, bold=True)
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -106,91 +113,8 @@ active_ob = None
 prev_ob = None
 active_decisional = None
 active_fvg = None
-liquidity_levels = []
 current_visible_count = 100.0
 target_visible_count = 100.0
-
-def find_liquidity(candles_list, start_idx, end_idx, bos_type, price_floor, price_ceil):
-    """
-    Busca liquidez dentro del rango operativo.
-    - BOS ALCISTA: busca equal highs entre price_floor (active_ob.high) y price_ceil (prev_range_high)
-    - BOS BAJISTA: busca equal lows entre price_floor (prev_range_low) y price_ceil (active_ob.low)
-    Fractal menor: high/low con 2 velas de retroceso despues.
-    2+ fractales al mismo nivel (tolerancia 3 pts), separados 4+ velas = LIQ.
-    Solo niveles NO mitigados. Maximo 3.
-    """
-    if price_floor >= price_ceil:
-        return []
-    tolerance = 3.0
-    min_separation = 4
-    fractals = []
-    if bos_type == "ALCISTA":
-        # Buscar fractal highs dentro de la zona
-        for i in range(start_idx, end_idx - 2):
-            c = candles_list[i]
-            if (candles_list[i + 1]["high"] < c["high"] and candles_list[i + 2]["high"] < c["high"]):
-                if price_floor <= c["high"] <= price_ceil:
-                    fractals.append({"price": c["high"], "index": i})
-        search_side = "high"
-    else:
-        # Buscar fractal lows dentro de la zona
-        for i in range(start_idx, end_idx - 2):
-            c = candles_list[i]
-            if (candles_list[i + 1]["low"] > c["low"] and candles_list[i + 2]["low"] > c["low"]):
-                if price_floor <= c["low"] <= price_ceil:
-                    fractals.append({"price": c["low"], "index": i})
-        search_side = "low"
-    # Buscar pares al mismo nivel
-    levels = []
-    for i in range(len(fractals)):
-        for j in range(i + 1, len(fractals)):
-            if abs(fractals[j]["index"] - fractals[i]["index"]) >= min_separation:
-                if abs(fractals[i]["price"] - fractals[j]["price"]) <= tolerance:
-                    avg_price = (fractals[i]["price"] + fractals[j]["price"]) / 2
-                    if avg_price < price_floor or avg_price > price_ceil:
-                        continue
-                    last_touch_idx = fractals[j]["index"]
-                    # Verificar que NO fue mitigado despues del ultimo toque
-                    mitigated = False
-                    for k in range(last_touch_idx + 1, end_idx):
-                        if search_side == "high" and candles_list[k]["close"] > avg_price:
-                            mitigated = True
-                            break
-                        elif search_side == "low" and candles_list[k]["close"] < avg_price:
-                            mitigated = True
-                            break
-                    if mitigated:
-                        continue
-                    found = False
-                    for lv in levels:
-                        if abs(lv["price"] - avg_price) <= tolerance:
-                            lv["touches"] += 1
-                            if last_touch_idx > lv["last_index"]:
-                                lv["last_index"] = last_touch_idx
-                            found = True
-                            break
-                    if not found:
-                        levels.append({"side": search_side, "price": avg_price,
-                                       "first_index": fractals[i]["index"],
-                                       "last_index": last_touch_idx, "touches": 2})
-    levels.sort(key=lambda x: x["touches"], reverse=True)
-    return levels[:3]
-
-def mitigate_liquidity(candles_list, liq_levels, candle_index):
-    """
-    Elimina niveles de liquidez mitigados: cuando una vela cierra pasando el nivel.
-    """
-    if not liq_levels or candle_index >= len(candles_list):
-        return liq_levels
-    c = candles_list[candle_index]
-    remaining = []
-    for lv in liq_levels:
-        if lv["side"] == "high" and c["close"] > lv["price"]:
-            continue  # mitigado
-        if lv["side"] == "low" and c["close"] < lv["price"]:
-            continue  # mitigado
-        remaining.append(lv)
-    return remaining
 
 def find_decisional(candles_list, bos_index, bos_type, extreme_index):
     """
@@ -245,7 +169,7 @@ def process_new_candle(candles_list, new_index):
     global range_phase, range_high, range_high_index, range_low, range_low_index
     global pullback_count, prev_pullback_close, last_direction
     global prev_range_low, prev_range_low_index, prev_range_high, prev_range_high_index
-    global active_ob, prev_ob, active_decisional, active_fvg, liquidity_levels
+    global active_ob, prev_ob, active_decisional, active_fvg
     if new_index < 1:
         return
     c = candles_list[new_index]
@@ -283,9 +207,6 @@ def process_new_candle(candles_list, new_index):
         active_fvg = find_fvg(candles_list, range_high_index, new_index, "BAJISTA")
         if active_fvg is not None:
             active_fvg["type"] = "BAJISTA"
-        # Calcular liquidez en todas las velas visibles desde el BOS anterior
-        lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-        liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "BAJISTA", prev_range_low if prev_range_low else -99999, active_ob["low"] if active_ob else 99999)
         prev_range_high = range_high
         prev_range_high_index = range_high_index
         prev_range_low = None
@@ -320,9 +241,6 @@ def process_new_candle(candles_list, new_index):
         active_fvg = find_fvg(candles_list, range_low_index, new_index, "ALCISTA")
         if active_fvg is not None:
             active_fvg["type"] = "ALCISTA"
-        # Calcular liquidez en todas las velas visibles desde el BOS anterior
-        lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-        liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "ALCISTA", active_ob["high"] if active_ob else -99999, prev_range_high if prev_range_high else 99999)
         prev_range_low = range_low
         prev_range_low_index = range_low_index
         prev_range_high = None
@@ -417,9 +335,6 @@ def process_new_candle(candles_list, new_index):
             active_fvg = find_fvg(candles_list, range_low_index, new_index, "ALCISTA")
             if active_fvg is not None:
                 active_fvg["type"] = "ALCISTA"
-            # Calcular liquidez en todas las velas visibles desde el BOS anterior
-            lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-            liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "ALCISTA", active_ob["high"] if active_ob else -99999, prev_range_high if prev_range_high else 99999)
             prev_range_low = range_low
             prev_range_low_index = range_low_index
             range_high = c["high"]
@@ -450,9 +365,6 @@ def process_new_candle(candles_list, new_index):
             active_fvg = find_fvg(candles_list, range_high_index, new_index, "BAJISTA")
             if active_fvg is not None:
                 active_fvg["type"] = "BAJISTA"
-            # Calcular liquidez en todas las velas visibles desde el BOS anterior
-            lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-            liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "BAJISTA", prev_range_low if prev_range_low else -99999, active_ob["low"] if active_ob else 99999)
             prev_range_high = range_high
             prev_range_high_index = range_high_index
             range_low = c["low"]
@@ -474,7 +386,6 @@ while len(bos_markers) < 2:
     prev_ob = None
     active_decisional = None
     active_fvg = None
-    liquidity_levels = []
     range_phase = "buscando_high"
     range_high = None
     range_high_index = None
@@ -523,6 +434,29 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            # Botón BUY
+            buy_rect = pygame.Rect(1650, 250, 120, 45)
+            sell_rect = pygame.Rect(1790, 250, 120, 45)
+            if buy_rect.collidepoint(mx, my) and active_trade is None:
+                entry_price = current_candle["close"]
+                active_trade = {
+                    "type": "BUY",
+                    "entry": entry_price,
+                    "sl": entry_price - SL_DISTANCE,
+                    "tp": entry_price + TP_DISTANCE,
+                }
+                play_sound(sound_bos)
+            elif sell_rect.collidepoint(mx, my) and active_trade is None:
+                entry_price = current_candle["close"]
+                active_trade = {
+                    "type": "SELL",
+                    "entry": entry_price,
+                    "sl": entry_price + SL_DISTANCE,
+                    "tp": entry_price - TP_DISTANCE,
+                }
+                play_sound(sound_bos)
     if current_time - last_tick_time >= TICK_DELAY:
         step_size = random.uniform(0.4, 1.8)
         tick_move = step_size if random.random() < 0.5 else -step_size
@@ -530,6 +464,27 @@ while running:
         current_candle["high"] = max(current_candle["high"], current_candle["close"])
         current_candle["low"] = min(current_candle["low"], current_candle["close"])
         last_tick_time = current_time
+        # --- EVALUAR TRADE ACTIVO ---
+        if active_trade is not None:
+            current_price = current_candle["close"]
+            if active_trade["type"] == "BUY":
+                if current_price >= active_trade["tp"]:
+                    trade_win(TRADE_RISK * TP_MULTIPLIER)
+                    trade_history.append({"type": "BUY", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
+                    active_trade = None
+                elif current_price <= active_trade["sl"]:
+                    trade_loss(TRADE_RISK)
+                    trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
+                    active_trade = None
+            elif active_trade["type"] == "SELL":
+                if current_price <= active_trade["tp"]:
+                    trade_win(TRADE_RISK * TP_MULTIPLIER)
+                    trade_history.append({"type": "SELL", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
+                    active_trade = None
+                elif current_price >= active_trade["sl"]:
+                    trade_loss(TRADE_RISK)
+                    trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
+                    active_trade = None
     if current_time - last_candle_time >= CANDLE_DURATION:
         candles.append(current_candle.copy())
         if len(candles) > 1000:
@@ -570,16 +525,10 @@ while running:
                 active_fvg["index"] -= 1
                 if active_fvg["index"] < 0:
                     active_fvg = None
-            for lq in liquidity_levels:
-                lq["first_index"] -= 1
-                lq["last_index"] -= 1
-            liquidity_levels[:] = [lq for lq in liquidity_levels if lq["first_index"] >= 0]
         current_len = len(candles)
         bos_markers[:] = [b for b in bos_markers if current_len - b["break_index"] <= 999]
         confirmed_fractals[:] = [f for f in confirmed_fractals if current_len - f["index"] <= 999]
         process_new_candle(candles, len(candles) - 1)
-        # Mitigar liquidez si el precio cruzo un nivel
-        liquidity_levels = mitigate_liquidity(candles, liquidity_levels, len(candles) - 1)
         last_checked_index = len(candles)
         current_candle = {"open": candles[-1]["close"], "close": candles[-1]["close"], "high": candles[-1]["close"], "low": candles[-1]["close"]}
         last_candle_time = current_time
@@ -709,27 +658,6 @@ while running:
             pygame.draw.line(screen, color, (center_x, y_high), (center_x, top_body), 1)
             pygame.draw.line(screen, color, (center_x, bottom_body), (center_x, y_low), 1)
             pygame.draw.rect(screen, color, (x_pos, top_body, candle_width, body_height))
-        # --- RENDERIZAR LIQUIDEZ ---
-        lq_surface = pygame.Surface((1920, 1080), pygame.SRCALPHA)
-        lq_color = (255, 140, 50, 179)  # naranja con 70% opacidad
-        for lq in liquidity_levels:
-            lq_vis_start = lq["first_index"] - visible_start_global
-            if lq_vis_start < 0:
-                lq_vis_start = 0
-            if lq_vis_start >= len(visible_candles):
-                continue
-            lq_x_start = int(start_x + (lq_vis_start * spacing)) + (candle_width // 2)
-            lq_x_end = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
-            lq_y = center_y - int((lq["price"] - view_center_price) * vertical_zoom)
-            # Linea punteada
-            for x in range(lq_x_start, lq_x_end, 10):
-                seg_end = min(x + 5, lq_x_end)
-                pygame.draw.line(lq_surface, lq_color, (x, lq_y), (seg_end, lq_y), 1)
-            # Texto "LIQ" centrado en la linea
-            lq_txt = font_ob.render("LIQ", True, (255, 140, 50))
-            lq_txt_rect = lq_txt.get_rect(center=((lq_x_start + lq_x_end) // 2, lq_y))
-            lq_surface.blit(lq_txt, lq_txt_rect)
-        screen.blit(lq_surface, (0, 0))
         fractal_surface = pygame.Surface((1920, 1080), pygame.SRCALPHA)
         total_fractals = len(confirmed_fractals)
         for idx, frac in enumerate(confirmed_fractals):
@@ -785,5 +713,61 @@ while running:
         screen.blit(font_hud_val.render(str(wins), True, (38, 166, 154)), (hud_x + 110, hud_y + 50))
         screen.blit(font_hud_title.render("Losses:", True, (255, 255, 255)), (hud_x, hud_y + 100))
         screen.blit(font_hud_val.render(str(losses), True, (239, 83, 80)), (hud_x + 110, hud_y + 100))
+        # Win Rate
+        total_trades = wins + losses
+        win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+        screen.blit(font_hud_title.render("Win Rate:", True, (255, 255, 255)), (hud_x, hud_y + 150))
+        wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
+        screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
+        # Botones BUY / SELL
+        buy_rect = pygame.Rect(1650, 250, 120, 45)
+        sell_rect = pygame.Rect(1790, 250, 120, 45)
+        if active_trade is None:
+            pygame.draw.rect(screen, (38, 166, 154), buy_rect, border_radius=6)
+            pygame.draw.rect(screen, (239, 83, 80), sell_rect, border_radius=6)
+            buy_txt = font_btn.render("BUY", True, (255, 255, 255))
+            sell_txt = font_btn.render("SELL", True, (255, 255, 255))
+            screen.blit(buy_txt, buy_txt.get_rect(center=buy_rect.center))
+            screen.blit(sell_txt, sell_txt.get_rect(center=sell_rect.center))
+        else:
+            # Mostrar info del trade activo
+            pygame.draw.rect(screen, (80, 80, 80), buy_rect, border_radius=6)
+            pygame.draw.rect(screen, (80, 80, 80), sell_rect, border_radius=6)
+            trade_txt = font_btn.render(f"{active_trade['type']} ACTIVO", True, (255, 255, 0))
+            screen.blit(trade_txt, trade_txt.get_rect(center=(1720, 272)))
+            # Mostrar Entry, TP, SL
+            entry_txt = font_trade.render(f"Entry: {active_trade['entry']:.2f}", True, (255, 255, 255))
+            tp_txt = font_trade.render(f"TP: {active_trade['tp']:.2f}", True, (38, 166, 154))
+            sl_txt = font_trade.render(f"SL: {active_trade['sl']:.2f}", True, (239, 83, 80))
+            screen.blit(entry_txt, (hud_x, 310))
+            screen.blit(tp_txt, (hud_x, 330))
+            screen.blit(sl_txt, (hud_x, 350))
+            # PnL flotante
+            current_price = current_candle["close"]
+            if active_trade["type"] == "BUY":
+                pnl_points = current_price - active_trade["entry"]
+            else:
+                pnl_points = active_trade["entry"] - current_price
+            pnl_color = (38, 166, 154) if pnl_points >= 0 else (239, 83, 80)
+            pnl_txt = font_hud_val.render(f"PnL: {pnl_points:+.1f} pts", True, pnl_color)
+            screen.blit(pnl_txt, (hud_x, 375))
+        # --- DIBUJAR TP/SL EN EL GRAFICO ---
+        if active_trade is not None:
+            tp_y = center_y - int((active_trade["tp"] - view_center_price) * vertical_zoom)
+            sl_y = center_y - int((active_trade["sl"] - view_center_price) * vertical_zoom)
+            entry_y = center_y - int((active_trade["entry"] - view_center_price) * vertical_zoom)
+            # Linea de entrada (blanca punteada)
+            for x in range(0, chart_end_x, 12):
+                pygame.draw.line(screen, (255, 255, 255, 180), (x, entry_y), (x + 6, entry_y), 1)
+            # Linea TP (verde)
+            for x in range(0, chart_end_x, 12):
+                pygame.draw.line(screen, (38, 166, 154), (x, tp_y), (x + 6, tp_y), 2)
+            # Linea SL (roja)
+            for x in range(0, chart_end_x, 12):
+                pygame.draw.line(screen, (239, 83, 80), (x, sl_y), (x + 6, sl_y), 2)
+            # Labels
+            screen.blit(font_trade.render("TP", True, (38, 166, 154)), (5, tp_y - 15))
+            screen.blit(font_trade.render("SL", True, (239, 83, 80)), (5, sl_y - 15))
+            screen.blit(font_trade.render("ENTRY", True, (255, 255, 255)), (5, entry_y - 15))
     pygame.display.flip()
 pygame.quit()
