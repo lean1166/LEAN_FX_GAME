@@ -84,8 +84,8 @@ def find_liquidity(candles_list, start_idx, end_idx, bos_type, price_floor, pric
     """
     if price_floor >= price_ceil:
         return []
-    tolerance = 3.0
-    min_separation = 4
+    tolerance = 4.0
+    min_separation = 3
     fractals = []
     if bos_type == "ALCISTA":
         # Buscar fractal highs dentro de la zona
@@ -244,9 +244,11 @@ def process_new_candle(candles_list, new_index):
         active_fvg = find_fvg(candles_list, range_high_index, new_index, "BAJISTA")
         if active_fvg is not None:
             active_fvg["type"] = "BAJISTA"
-        # Calcular liquidez en todas las velas visibles desde el BOS anterior
+        # Calcular liquidez: buscar equal lows entre el low del decisional y el low del extremo
         lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-        liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "BAJISTA", prev_range_low if prev_range_low else -99999, active_ob["low"] if active_ob else 99999)
+        lq_floor = active_decisional["low"] if active_decisional else (active_ob["low"] if active_ob else -99999)
+        lq_ceil = active_ob["high"] if active_ob else 99999
+        liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "BAJISTA", lq_floor, lq_ceil)
         prev_range_high = range_high
         prev_range_high_index = range_high_index
         prev_range_low = None
@@ -281,7 +283,9 @@ def process_new_candle(candles_list, new_index):
             active_fvg["type"] = "ALCISTA"
         # Calcular liquidez en todas las velas visibles desde el BOS anterior
         lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-        liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "ALCISTA", active_ob["high"] if active_ob else -99999, prev_range_high if prev_range_high else 99999)
+        lq_floor = active_ob["low"] if active_ob else -99999
+        lq_ceil = active_decisional["high"] if active_decisional else (active_ob["high"] if active_ob else 99999)
+        liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "ALCISTA", lq_floor, lq_ceil)
         prev_range_low = range_low
         prev_range_low_index = range_low_index
         prev_range_high = None
@@ -405,7 +409,9 @@ def process_new_candle(candles_list, new_index):
                 active_fvg["type"] = "BAJISTA"
             # Calcular liquidez en todas las velas visibles desde el BOS anterior
             lq_impulse_start = bos_markers[-2]["break_index"] if len(bos_markers) >= 2 else 0
-            liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "BAJISTA", prev_range_low if prev_range_low else -99999, active_ob["low"] if active_ob else 99999)
+            lq_floor = active_decisional["low"] if active_decisional else (active_ob["low"] if active_ob else -99999)
+            lq_ceil = active_ob["high"] if active_ob else 99999
+            liquidity_levels = find_liquidity(candles_list, lq_impulse_start, new_index, "BAJISTA", lq_floor, lq_ceil)
             prev_range_high = range_high
             prev_range_high_index = range_high_index
             range_low = c["low"]
