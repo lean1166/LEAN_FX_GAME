@@ -62,34 +62,14 @@ font_ob = pygame.font.SysFont("Consolas", 13, bold=True)
 PROFILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "profile")
 avatar_img = None
 # Buscar cualquier imagen en la carpeta profile
-for ext in ["lean_fx.png", "lean_fx.jpg", "lean_fx.jpeg"]:
-    avatar_path = os.path.join(PROFILE_DIR, ext)
-    if os.path.exists(avatar_path):
-        avatar_img = pygame.image.load(avatar_path).convert_alpha()
-        avatar_img = pygame.transform.smoothscale(avatar_img, (50, 50))
-        break
-if avatar_img is None:
-    # Buscar cualquier imagen en la carpeta
-    if os.path.exists(PROFILE_DIR):
-        for f in os.listdir(PROFILE_DIR):
-            if f.lower().endswith((".png", ".jpg", ".jpeg")):
-                avatar_img = pygame.image.load(os.path.join(PROFILE_DIR, f)).convert_alpha()
-                avatar_img = pygame.transform.smoothscale(avatar_img, (50, 50))
-                break
+if os.path.exists(PROFILE_DIR):
+    for f in os.listdir(PROFILE_DIR):
+        if f.lower().endswith((".png", ".jpg", ".jpeg")):
+            avatar_img = pygame.image.load(os.path.join(PROFILE_DIR, f)).convert_alpha()
+            avatar_img = pygame.transform.smoothscale(avatar_img, (50, 50))
+            break
 if avatar_img is None:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
-# Aplicar mascara circular al avatar (una sola vez)
-if avatar_img is not None:
-    avatar_size = 50
-    avatar_masked = pygame.Surface((avatar_size, avatar_size), pygame.SRCALPHA)
-    avatar_masked.blit(avatar_img, (0, 0))
-    for x in range(avatar_size):
-        for y in range(avatar_size):
-            dx = x - avatar_size // 2
-            dy = y - avatar_size // 2
-            if dx * dx + dy * dy > (avatar_size // 2) * (avatar_size // 2):
-                avatar_masked.set_at((x, y), (0, 0, 0, 0))
-    avatar_img = avatar_masked
 
 # --- TOP 5 VIEWERS (hardcoded para pruebas) ---
 font_top = pygame.font.SysFont("Arial", 14, bold=True)
