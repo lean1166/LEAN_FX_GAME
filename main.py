@@ -78,6 +78,18 @@ if avatar_img is None:
                 break
 if avatar_img is None:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
+# Aplicar mascara circular al avatar (una sola vez)
+if avatar_img is not None:
+    avatar_size = 50
+    avatar_masked = pygame.Surface((avatar_size, avatar_size), pygame.SRCALPHA)
+    avatar_masked.blit(avatar_img, (0, 0))
+    for x in range(avatar_size):
+        for y in range(avatar_size):
+            dx = x - avatar_size // 2
+            dy = y - avatar_size // 2
+            if dx * dx + dy * dy > (avatar_size // 2) * (avatar_size // 2):
+                avatar_masked.set_at((x, y), (0, 0, 0, 0))
+    avatar_img = avatar_masked
 
 # --- TOP 5 VIEWERS (hardcoded para pruebas) ---
 font_top = pygame.font.SysFont("Arial", 14, bold=True)
@@ -796,13 +808,7 @@ while running:
         hud_y = int(SCREEN_H * 0.06)
         # --- AVATAR + NOMBRE ---
         if avatar_img is not None:
-            # Recortar avatar en circulo
-            avatar_size = 50
-            circle_surface = pygame.Surface((avatar_size, avatar_size), pygame.SRCALPHA)
-            pygame.draw.circle(circle_surface, (255, 255, 255, 255), (avatar_size // 2, avatar_size // 2), avatar_size // 2)
-            avatar_circle = avatar_img.copy()
-            avatar_circle.blit(circle_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
-            screen.blit(avatar_circle, (hud_x, hud_y - 55))
+            screen.blit(avatar_img, (hud_x, hud_y - 55))
         name_txt = font_hud_val.render(STREAMER_NAME, True, (0, 191, 255))
         screen.blit(name_txt, (hud_x + 55, hud_y - 45))
         # --- STATS ---
