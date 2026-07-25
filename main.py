@@ -770,9 +770,8 @@ while running:
                 line_start_x = 0
             else:
                 line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
-            # Se extiende desde la entrada hasta la ultima vela visible + 5 velas adelante
-            last_candle_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + (candle_width // 2)
-            line_end_x = min(last_candle_x + int(5 * spacing), chart_end_x)
+            # El indicador siempre termina 5 velas adelante de la ultima vela visible
+            line_end_x = min(int(start_x + ((len(visible_candles) - 1 + 5) * spacing)), chart_end_x)
             rect_width = line_end_x - line_start_x
             if rect_width > 0:
                 # Zona TP (verde claro semi-transparente)
@@ -792,7 +791,7 @@ while running:
             pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
             # Linea SL (roja solida)
             pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
-            # Labels con fondo al final del rectangulo (5 velas adelante)
+            # Labels con fondo siempre 5 velas adelante
             # Entry label
             entry_label = font_trade.render(f" {active_trade['entry']:.2f} ", True, (255, 255, 255))
             entry_bg = pygame.Rect(line_end_x + 3, entry_y - 9, entry_label.get_width(), entry_label.get_height())
