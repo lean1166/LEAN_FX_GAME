@@ -57,6 +57,27 @@ font_hud_title = pygame.font.SysFont("Arial", 18, bold=True)
 font_hud_val = pygame.font.SysFont("Arial", 22, bold=True)
 font_bos = pygame.font.SysFont("Arial", 16, bold=True)
 font_ob = pygame.font.SysFont("Consolas", 13, bold=True)
+
+# --- CARGAR AVATAR ---
+PROFILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "profile")
+avatar_img = None
+avatar_path = os.path.join(PROFILE_DIR, "lean_fx.png")
+if os.path.exists(avatar_path):
+    avatar_img = pygame.image.load(avatar_path).convert_alpha()
+    avatar_img = pygame.transform.smoothscale(avatar_img, (50, 50))
+else:
+    print(f"[AVISO] Avatar no encontrado: {avatar_path}")
+
+# --- TOP 5 VIEWERS (hardcoded para pruebas) ---
+font_top = pygame.font.SysFont("Arial", 14, bold=True)
+top_viewers = [
+    {"name": "crypto_wolf", "balance": 10800},
+    {"name": "trader_mike", "balance": 10400},
+    {"name": "fx_queen", "balance": 10200},
+    {"name": "bull_master", "balance": 9900},
+    {"name": "sniper_pro", "balance": 9700},
+]
+STREAMER_NAME = "LEAN FX"
 fxp_balance = 10000
 wins = 0
 losses = 0
@@ -762,6 +783,12 @@ while running:
             screen.blit(bos_text, text_rect)
         hud_x = int(SCREEN_W * 0.86)
         hud_y = int(SCREEN_H * 0.06)
+        # --- AVATAR + NOMBRE ---
+        if avatar_img is not None:
+            screen.blit(avatar_img, (hud_x, hud_y - 55))
+        name_txt = font_hud_val.render(STREAMER_NAME, True, (0, 191, 255))
+        screen.blit(name_txt, (hud_x + 55, hud_y - 45))
+        # --- STATS ---
         screen.blit(font_hud_title.render("Balance:", True, (255, 255, 255)), (hud_x, hud_y))
         screen.blit(font_hud_val.render("$" + str(round(fxp_balance, 2)), True, (0, 191, 255)), (hud_x + 110, hud_y))
         screen.blit(font_hud_title.render("Wins:", True, (255, 255, 255)), (hud_x, hud_y + 50))
@@ -774,6 +801,17 @@ while running:
         screen.blit(font_hud_title.render("Win Rate:", True, (255, 255, 255)), (hud_x, hud_y + 150))
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
+        # --- TOP 5 VIEWERS (abajo del gráfico) ---
+        top_y = int(SCREEN_H * 0.88)
+        top_x = int(SCREEN_W * 0.02)
+        top_title = font_hud_title.render("TOP 5 TRADERS", True, (255, 255, 0))
+        screen.blit(top_title, (top_x, top_y - 25))
+        for i, viewer in enumerate(top_viewers):
+            rank_color = (255, 215, 0) if i == 0 else (192, 192, 192) if i == 1 else (205, 127, 50) if i == 2 else (255, 255, 255)
+            rank_txt = font_top.render(f"#{i+1} {viewer['name']}", True, rank_color)
+            bal_txt = font_top.render(f"${viewer['balance']}", True, (0, 191, 255))
+            screen.blit(rank_txt, (top_x + (i * int(SCREEN_W * 0.15)), top_y))
+            screen.blit(bal_txt, (top_x + (i * int(SCREEN_W * 0.15)), top_y + 18))
         # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
         sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
