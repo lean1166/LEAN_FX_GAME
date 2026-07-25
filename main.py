@@ -85,13 +85,18 @@ current_candle = {"open": candles[-1]["close"], "close": candles[-1]["close"], "
 buttons_active = False
 zone_time_left = 0.0
 active_trade = None
-TRADE_RISK = 100  # Cantidad que arriesgas por trade
+TRADE_RISK = 100  # Siempre pierdes $100, sin importar el tamaño del SL
 TP_MULTIPLIER = 2.0  # Risk:Reward 1:2
-SL_DISTANCE = 15.0  # Distancia del Stop Loss en puntos
-TP_DISTANCE = SL_DISTANCE * TP_MULTIPLIER  # Distancia del Take Profit
+TIMER_DURATION = 10000  # 10 segundos en ms (temporal para pruebas)
 trade_history = []
 font_btn = pygame.font.SysFont("Arial", 20, bold=True)
 font_trade = pygame.font.SysFont("Arial", 14, bold=True)
+font_timer = pygame.font.SysFont("Arial", 48, bold=True)
+# Estado del timer y zona
+zone_frozen = False  # True cuando el gráfico está congelado
+zone_timer_start = 0  # Momento en que se activó el timer
+zone_detected = None  # Info de la zona detectada {"high", "low", "type"}
+trade_decided = False  # Si ya eligió BUY o SELL durante el timer
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -440,60 +445,100 @@ while running:
                 running = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            # Botón BUY
-            hud_x_click = int(SCREEN_W * 0.86)
-            hud_y_click = int(SCREEN_H * 0.06)
-            buy_rect = pygame.Rect(hud_x_click, hud_y_click + 190, 120, 45)
-            sell_rect = pygame.Rect(hud_x_click + 140, hud_y_click + 190, 120, 45)
-            if buy_rect.collidepoint(mx, my) and active_trade is None:
-                entry_price = current_candle["close"]
-                active_trade = {
-                    "type": "BUY",
-                    "entry": entry_price,
-                    "sl": entry_price - SL_DISTANCE,
-                    "tp": entry_price + TP_DISTANCE,
-                    "entry_index": len(candles),
-                }
-                play_sound(sound_bos)
-            elif sell_rect.collidepoint(mx, my) and active_trade is None:
-                entry_price = current_candle["close"]
-                active_trade = {
-                    "type": "SELL",
-                    "entry": entry_price,
-                    "sl": entry_price + SL_DISTANCE,
-                    "tp": entry_price - TP_DISTANCE,
-                    "entry_index": len(candles),
-                }
-                play_sound(sound_bos)
-    if current_time - last_tick_time >= TICK_DELAY:
-        step_size = random.uniform(0.4, 1.8)
-        tick_move = step_size if random.random() < 0.5 else -step_size
-        current_candle["close"] += tick_move
-        current_candle["high"] = max(current_candle["high"], current_candle["close"])
-        current_candle["low"] = min(current_candle["low"], current_candle["close"])
-        last_tick_time = current_time
-        # --- EVALUAR TRADE ACTIVO ---
-        if active_trade is not None:
-            current_price = current_candle["close"]
-            if active_trade["type"] == "BUY":
-                if current_price >= active_trade["tp"]:
-                    trade_win(TRADE_RISK * TP_MULTIPLIER)
-                    trade_history.append({"type": "BUY", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
-                    active_trade = None
-                elif current_price <= active_trade["sl"]:
-                    trade_loss(TRADE_RISK)
-                    trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
-                    active_trade = None
-            elif active_trade["type"] == "SELL":
-                if current_price <= active_trade["tp"]:
-                    trade_win(TRADE_RISK * TP_MULTIPLIER)
-                    trade_history.append({"type": "SELL", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
-                    active_trade = None
-                elif current_price >= active_trade["sl"]:
-                    trade_loss(TRADE_RISK)
-                    trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
-                    active_trade = None
-    if current_time - last_candle_time >= CANDLE_DURATION:
+            # Solo se puede clickear BUY/SELL durante el timer y si no hay trade activo
+            if zone_frozen and not trade_decided and active_trade is None:
+                hud_x_click = int(SCREEN_W * 0.86)
+                hud_y_click = int(SCREEN_H * 0.06)
+                buy_rect = pygame.Rect(hud_x_click, hud_y_click + 190, 120, 45)
+                sell_rect = pygame.Rect(hud_x_click + 140, hud_y_click + 190, 120, 45)
+                if buy_rect.collidepoint(mx, my):
+                    entry_price = current_candle["close"]
+                    sl_price = zone_detected["low"]  # SL debajo de la zona
+                    sl_distance = entry_price - sl_price
+                    tp_distance = sl_distance * TP_MULTIPLIER
+                    active_trade = {
+                        "type": "BUY",
+                        "entry": entry_price,
+                        "sl": sl_price,
+                        "tp": entry_price + tp_distance,
+                        "entry_index": len(candles),
+                    }
+                    trade_decided = True
+                    play_sound(sound_bos)
+                elif sell_rect.collidepoint(mx, my):
+                    entry_price = current_candle["close"]
+                    sl_price = zone_detected["high"]  # SL encima de la zona
+                    sl_distance = sl_price - entry_price
+                    tp_distance = sl_distance * TP_MULTIPLIER
+                    active_trade = {
+                        "type": "SELL",
+                        "entry": entry_price,
+                        "sl": sl_price,
+                        "tp": entry_price - tp_distance,
+                        "entry_index": len(candles),
+                    }
+                    trade_decided = True
+                    play_sound(sound_bos)
+    # --- LOGICA DEL TIMER ---
+    if zone_frozen:
+        elapsed = current_time - zone_timer_start
+        if elapsed >= TIMER_DURATION:
+            # Timer terminó, reanudar gráfico
+            zone_frozen = False
+            zone_detected = None
+            trade_decided = False
+    # --- MOVER PRECIO (solo si NO está congelado) ---
+    if not zone_frozen:
+        if current_time - last_tick_time >= TICK_DELAY:
+            step_size = random.uniform(0.4, 1.8)
+            tick_move = step_size if random.random() < 0.5 else -step_size
+            current_candle["close"] += tick_move
+            current_candle["high"] = max(current_candle["high"], current_candle["close"])
+            current_candle["low"] = min(current_candle["low"], current_candle["close"])
+            last_tick_time = current_time
+            # --- EVALUAR TRADE ACTIVO ---
+            if active_trade is not None:
+                current_price = current_candle["close"]
+                if active_trade["type"] == "BUY":
+                    if current_price >= active_trade["tp"]:
+                        trade_win(TRADE_RISK * TP_MULTIPLIER)
+                        trade_history.append({"type": "BUY", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
+                        active_trade = None
+                    elif current_price <= active_trade["sl"]:
+                        trade_loss(TRADE_RISK)
+                        trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
+                        active_trade = None
+                elif active_trade["type"] == "SELL":
+                    if current_price <= active_trade["tp"]:
+                        trade_win(TRADE_RISK * TP_MULTIPLIER)
+                        trade_history.append({"type": "SELL", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
+                        active_trade = None
+                    elif current_price >= active_trade["sl"]:
+                        trade_loss(TRADE_RISK)
+                        trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
+                        active_trade = None
+            # --- DETECTAR SI PRECIO LLEGA A UNA ZONA ---
+            if active_trade is None and not zone_frozen:
+                price_now = current_candle["close"]
+                # Verificar Order Block activo
+                if active_ob is not None:
+                    if active_ob["low"] <= price_now <= active_ob["high"]:
+                        zone_frozen = True
+                        zone_timer_start = current_time
+                        zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"]}
+                # Verificar Decisional
+                if not zone_frozen and active_decisional is not None:
+                    if active_decisional["low"] <= price_now <= active_decisional["high"]:
+                        zone_frozen = True
+                        zone_timer_start = current_time
+                        zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"]}
+                # Verificar FVG
+                if not zone_frozen and active_fvg is not None:
+                    if active_fvg["low"] <= price_now <= active_fvg["high"]:
+                        zone_frozen = True
+                        zone_timer_start = current_time
+                        zone_detected = {"high": active_fvg["high"], "low": active_fvg["low"], "type": active_fvg["type"]}
+    if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
         candles.append(current_candle.copy())
         if len(candles) > 1000:
             candles.pop(0)
@@ -728,17 +773,29 @@ while running:
         screen.blit(font_hud_title.render("Win Rate:", True, (255, 255, 255)), (hud_x, hud_y + 150))
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
-        # Botones BUY / SELL
+        # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
         sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
-        if active_trade is None:
+        if zone_frozen and not trade_decided and active_trade is None:
+            # Timer activo, mostrar botones
             pygame.draw.rect(screen, (38, 166, 154), buy_rect, border_radius=6)
             pygame.draw.rect(screen, (239, 83, 80), sell_rect, border_radius=6)
             buy_txt = font_btn.render("BUY", True, (255, 255, 255))
             sell_txt = font_btn.render("SELL", True, (255, 255, 255))
             screen.blit(buy_txt, buy_txt.get_rect(center=buy_rect.center))
             screen.blit(sell_txt, sell_txt.get_rect(center=sell_rect.center))
-        else:
+            # Mostrar TIMER grande en el centro del gráfico
+            elapsed = current_time - zone_timer_start
+            remaining = max(0, TIMER_DURATION - elapsed)
+            seconds_left = remaining / 1000.0
+            timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
+            timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.10)))
+            screen.blit(timer_txt, timer_rect)
+            # Texto "ZONA DETECTADA"
+            zone_label = font_btn.render("ZONA DETECTADA - DECIDE!", True, (255, 255, 0))
+            zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.16)))
+            screen.blit(zone_label, zone_rect)
+        elif active_trade is not None:
             # Mostrar info del trade activo
             pygame.draw.rect(screen, (80, 80, 80), buy_rect, border_radius=6)
             pygame.draw.rect(screen, (80, 80, 80), sell_rect, border_radius=6)
