@@ -804,36 +804,67 @@ while running:
         screen.blit(font_hud_title.render("Win Rate:", True, (255, 255, 255)), (hud_x, hud_y + 150))
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
-        # --- TOP 5 VIEWERS (panel derecho, con fondo futurista) ---
+        # --- TOP 5 VIEWERS (panel futurista estilo gaming) ---
         top_y = hud_y + 420
-        # Fondo semi-transparente con borde cyan
-        top_panel_w = int(SCREEN_W * 0.13)
-        top_panel_h = 160
+        top_panel_w = int(SCREEN_W * 0.18)
+        row_h = 36
+        top_panel_h = 45 + (5 * row_h) + 10
+        # Fondo principal con gradiente oscuro
         top_panel = pygame.Surface((top_panel_w, top_panel_h), pygame.SRCALPHA)
-        top_panel.fill((10, 20, 30, 180))
-        screen.blit(top_panel, (hud_x - 5, top_y - 5))
-        pygame.draw.rect(screen, (0, 191, 255), (hud_x - 5, top_y - 5, top_panel_w, top_panel_h), 1)
-        # Titulo
-        top_title = font_hud_title.render("TOP 5 TRADERS", True, (0, 191, 255))
-        screen.blit(top_title, (hud_x, top_y))
-        # Lista
+        for row in range(top_panel_h):
+            alpha = 200 - int(row * 0.3)
+            pygame.draw.line(top_panel, (5, 10, 25, max(alpha, 140)), (0, row), (top_panel_w, row))
+        screen.blit(top_panel, (hud_x - 10, top_y - 10))
+        # Borde exterior neón cyan
+        pygame.draw.rect(screen, (0, 191, 255), (hud_x - 10, top_y - 10, top_panel_w, top_panel_h), 2)
+        # Borde interior glow (más suave)
+        pygame.draw.rect(screen, (0, 100, 150, 100), (hud_x - 8, top_y - 8, top_panel_w - 4, top_panel_h - 4), 1)
+        # Titulo con estilo neón
+        title_glow = font_hud_val.render("TOP 5 TRADERS", True, (0, 120, 180))
+        screen.blit(title_glow, (hud_x + 2, top_y - 3))
+        top_title = font_hud_val.render("TOP 5 TRADERS", True, (0, 220, 255))
+        screen.blit(top_title, (hud_x, top_y - 5))
+        # Línea separadora debajo del título
+        pygame.draw.line(screen, (0, 191, 255), (hud_x - 5, top_y + 22), (hud_x + top_panel_w - 20, top_y + 22), 1)
+        # Colores de fila por ranking
+        row_colors = [
+            (40, 35, 0, 160),    # Oro - fondo dorado oscuro
+            (30, 30, 35, 160),   # Plata - fondo gris oscuro
+            (35, 20, 5, 160),    # Bronce - fondo marrón oscuro
+            (15, 20, 30, 140),   # 4to - fondo azul muy oscuro
+            (15, 15, 20, 140),   # 5to - fondo casi negro
+        ]
+        rank_colors = [
+            (255, 215, 0),       # Oro
+            (192, 192, 192),     # Plata
+            (205, 127, 50),      # Bronce
+            (100, 140, 180),     # 4to - azul suave
+            (80, 80, 100),       # 5to - gris azulado
+        ]
+        border_colors = [
+            (255, 215, 0),       # Oro
+            (192, 192, 192),     # Plata
+            (205, 127, 50),      # Bronce
+            (50, 80, 120),       # 4to
+            (40, 40, 60),        # 5to
+        ]
         for i, viewer in enumerate(top_viewers):
-            if i == 0:
-                rank_color = (255, 215, 0)
-                prefix = "1."
-            elif i == 1:
-                rank_color = (192, 192, 192)
-                prefix = "2."
-            elif i == 2:
-                rank_color = (205, 127, 50)
-                prefix = "3."
-            else:
-                rank_color = (150, 150, 150)
-                prefix = f"{i+1}."
-            rank_txt = font_top.render(f"{prefix} {viewer['name']}", True, rank_color)
-            bal_txt = font_top.render(f"${viewer['balance']}", True, (0, 191, 255))
-            screen.blit(rank_txt, (hud_x + 2, top_y + 25 + (i * 25)))
-            screen.blit(bal_txt, (hud_x + top_panel_w - 70, top_y + 25 + (i * 25)))
+            ry = top_y + 30 + (i * row_h)
+            # Fondo de fila
+            row_surface = pygame.Surface((top_panel_w - 20, row_h - 4), pygame.SRCALPHA)
+            row_surface.fill(row_colors[i])
+            screen.blit(row_surface, (hud_x - 5, ry))
+            # Borde izquierdo de color (barra de ranking)
+            pygame.draw.rect(screen, border_colors[i], (hud_x - 5, ry, 4, row_h - 4))
+            # Número de ranking
+            rank_num = font_hud_title.render(f"#{i+1}", True, rank_colors[i])
+            screen.blit(rank_num, (hud_x + 4, ry + 6))
+            # Nombre
+            name_txt = font_top.render(viewer['name'], True, (255, 255, 255))
+            screen.blit(name_txt, (hud_x + 35, ry + 9))
+            # Balance
+            bal_txt = font_top.render(f"${viewer['balance']}", True, (0, 220, 255))
+            screen.blit(bal_txt, (hud_x + top_panel_w - 85, ry + 9))
         # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
         sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
