@@ -581,8 +581,10 @@ while running:
         view_center_price = min_p + price_range / 2
         center_y = SCREEN_H // 2
         chart_start_x = 0
-        chart_end_x = int(SCREEN_W * 0.70)
-        available_width = chart_end_x - chart_start_x
+        chart_end_x = int(SCREEN_W * 0.75)
+        # Las velas ocupan hasta el 60%, dejando espacio para labels adelante
+        candles_end_x = int(SCREEN_W * 0.55)
+        available_width = candles_end_x - chart_start_x
         spacing = available_width / max(num_visible - 1, 1)
         candle_width = max(3, int(spacing * 0.65))
         start_x = chart_start_x
