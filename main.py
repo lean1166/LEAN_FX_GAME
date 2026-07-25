@@ -582,8 +582,8 @@ while running:
         center_y = SCREEN_H // 2
         chart_start_x = 0
         chart_end_x = int(SCREEN_W * 0.75)
-        # Velas ocupan hasta 60%, dejando 15% de espacio vacio adelante para el indicador
-        available_width = int(SCREEN_W * 0.60) - chart_start_x
+        # Velas ocupan hasta 70%
+        available_width = int(SCREEN_W * 0.70) - chart_start_x
         spacing = available_width / max(num_visible - 1, 1)
         candle_width = max(3, int(spacing * 0.65))
         start_x = chart_start_x
