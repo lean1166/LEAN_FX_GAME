@@ -86,7 +86,8 @@ buttons_active = False
 zone_time_left = 0.0
 active_trade = None
 TRADE_RISK = 100  # Siempre pierdes $100, sin importar el tamaño del SL
-TP_MULTIPLIER = 2.0  # Risk:Reward 1:2
+TP_MULTIPLIER = 3.0  # Risk:Reward 1:3
+SL_BUFFER = 5.0  # Pips de respiro para el SL
 TIMER_DURATION = 10000  # 10 segundos en ms (temporal para pruebas)
 trade_history = []
 font_btn = pygame.font.SysFont("Arial", 20, bold=True)
@@ -453,7 +454,7 @@ while running:
                 sell_rect = pygame.Rect(hud_x_click + 140, hud_y_click + 190, 120, 45)
                 if buy_rect.collidepoint(mx, my):
                     entry_price = current_candle["close"]
-                    sl_price = zone_detected["low"]  # SL debajo de la zona
+                    sl_price = zone_detected["low"] - SL_BUFFER  # SL debajo de la zona + respiro
                     sl_distance = entry_price - sl_price
                     tp_distance = sl_distance * TP_MULTIPLIER
                     active_trade = {
@@ -467,7 +468,7 @@ while running:
                     play_sound(sound_bos)
                 elif sell_rect.collidepoint(mx, my):
                     entry_price = current_candle["close"]
-                    sl_price = zone_detected["high"]  # SL encima de la zona
+                    sl_price = zone_detected["high"] + SL_BUFFER  # SL encima de la zona + respiro
                     sl_distance = sl_price - entry_price
                     tp_distance = sl_distance * TP_MULTIPLIER
                     active_trade = {
