@@ -771,10 +771,9 @@ while running:
                 line_start_x = 0
             else:
                 line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
-            # Los labels van a un offset fijo a la derecha de la ultima vela (espacio para 5 velas)
+            # Los labels van 3 velas adelante de la ultima vela
             last_candle_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
-            label_offset = int(SCREEN_W * 0.06)  # 6% de pantalla de espacio adelante
-            label_x = last_candle_x + label_offset
+            label_x = last_candle_x + int(3 * spacing)
             # Las zonas van desde entrada hasta los labels
             line_end_x = label_x
             rect_width = line_end_x - line_start_x
