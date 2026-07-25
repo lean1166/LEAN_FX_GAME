@@ -796,7 +796,13 @@ while running:
         hud_y = int(SCREEN_H * 0.06)
         # --- AVATAR + NOMBRE ---
         if avatar_img is not None:
-            screen.blit(avatar_img, (hud_x, hud_y - 55))
+            # Recortar avatar en circulo
+            avatar_size = 50
+            circle_surface = pygame.Surface((avatar_size, avatar_size), pygame.SRCALPHA)
+            pygame.draw.circle(circle_surface, (255, 255, 255, 255), (avatar_size // 2, avatar_size // 2), avatar_size // 2)
+            avatar_circle = avatar_img.copy()
+            avatar_circle.blit(circle_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            screen.blit(avatar_circle, (hud_x, hud_y - 55))
         name_txt = font_hud_val.render(STREAMER_NAME, True, (0, 191, 255))
         screen.blit(name_txt, (hud_x + 55, hud_y - 45))
         # --- STATS ---
