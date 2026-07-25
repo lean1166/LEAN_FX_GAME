@@ -582,9 +582,7 @@ while running:
         center_y = SCREEN_H // 2
         chart_start_x = 0
         chart_end_x = int(SCREEN_W * 0.75)
-        # Las velas ocupan hasta el 60%, dejando espacio para labels adelante
-        candles_end_x = int(SCREEN_W * 0.55)
-        available_width = candles_end_x - chart_start_x
+        available_width = int(SCREEN_W * 0.70) - chart_start_x
         spacing = available_width / max(num_visible - 1, 1)
         candle_width = max(3, int(spacing * 0.65))
         start_x = chart_start_x
