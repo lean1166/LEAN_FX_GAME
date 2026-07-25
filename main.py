@@ -452,6 +452,7 @@ while running:
                     "entry": entry_price,
                     "sl": entry_price - SL_DISTANCE,
                     "tp": entry_price + TP_DISTANCE,
+                    "entry_index": len(candles),
                 }
                 play_sound(sound_bos)
             elif sell_rect.collidepoint(mx, my) and active_trade is None:
@@ -461,6 +462,7 @@ while running:
                     "entry": entry_price,
                     "sl": entry_price + SL_DISTANCE,
                     "tp": entry_price - TP_DISTANCE,
+                    "entry_index": len(candles),
                 }
                 play_sound(sound_bos)
     if current_time - last_tick_time >= TICK_DELAY:
@@ -762,14 +764,20 @@ while running:
             tp_y = center_y - int((active_trade["tp"] - view_center_price) * vertical_zoom)
             sl_y = center_y - int((active_trade["sl"] - view_center_price) * vertical_zoom)
             entry_y = center_y - int((active_trade["entry"] - view_center_price) * vertical_zoom)
+            # Calcular X de inicio desde la vela de entrada
+            entry_vis = active_trade["entry_index"] - visible_start_global
+            if entry_vis < 0:
+                line_start_x = 0
+            else:
+                line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
             # Linea de entrada (blanca punteada)
-            for x in range(0, chart_end_x, 12):
+            for x in range(line_start_x, chart_end_x, 12):
                 pygame.draw.line(screen, (255, 255, 255), (x, entry_y), (x + 6, entry_y), 1)
             # Linea TP (verde)
-            for x in range(0, chart_end_x, 12):
+            for x in range(line_start_x, chart_end_x, 12):
                 pygame.draw.line(screen, (38, 166, 154), (x, tp_y), (x + 6, tp_y), 2)
             # Linea SL (roja)
-            for x in range(0, chart_end_x, 12):
+            for x in range(line_start_x, chart_end_x, 12):
                 pygame.draw.line(screen, (239, 83, 80), (x, sl_y), (x + 6, sl_y), 2)
             # Labels al final de cada linea (mismo eje Y)
             entry_label = font_trade.render(f"ENTRY {active_trade['entry']:.2f}", True, (255, 255, 255))
