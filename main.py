@@ -6,7 +6,11 @@ import pygame
 try:
     pygame.init()
     pygame.mixer.init()
-    screen = pygame.display.set_mode((1920, 1080))
+    # Detectar resolución de pantalla automáticamente
+    display_info = pygame.display.Info()
+    SCREEN_W = display_info.current_w
+    SCREEN_H = display_info.current_h
+    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN)
     pygame.display.set_caption("LEAN FX LIVE")
 except Exception as e:
     print("[ERROR GRAFICO]:", e)
@@ -437,8 +441,10 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
             # Botón BUY
-            buy_rect = pygame.Rect(1650, 250, 120, 45)
-            sell_rect = pygame.Rect(1790, 250, 120, 45)
+            hud_x_click = int(SCREEN_W * 0.86)
+            hud_y_click = int(SCREEN_H * 0.06)
+            buy_rect = pygame.Rect(hud_x_click, hud_y_click + 190, 120, 45)
+            sell_rect = pygame.Rect(hud_x_click + 140, hud_y_click + 190, 120, 45)
             if buy_rect.collidepoint(mx, my) and active_trade is None:
                 entry_price = current_candle["close"]
                 active_trade = {
@@ -569,11 +575,11 @@ while running:
         price_range = max_p - min_p
         if price_range == 0:
             price_range = 1.0
-        vertical_zoom = 950.0 / price_range
+        vertical_zoom = (SCREEN_H * 0.88) / price_range
         view_center_price = min_p + price_range / 2
-        center_y = 540
+        center_y = SCREEN_H // 2
         chart_start_x = 0
-        chart_end_x = int(1920 * 0.70)
+        chart_end_x = int(SCREEN_W * 0.70)
         available_width = chart_end_x - chart_start_x
         spacing = available_width / max(num_visible - 1, 1)
         candle_width = max(3, int(spacing * 0.65))
@@ -581,7 +587,7 @@ while running:
         total_candles = len(all_candles)
         visible_start_global = total_candles - len(visible_candles)
         # --- RENDERIZAR ORDER BLOCKS, DECISIONAL, FVG ---
-        ob_surface = pygame.Surface((1920, 1080), pygame.SRCALPHA)
+        ob_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
         for ob_data, ob_opacity, ob_label in [(prev_ob, 20, ""), (active_ob, 40, "EXTREMO")]:
             if ob_data is None:
                 continue
@@ -658,7 +664,7 @@ while running:
             pygame.draw.line(screen, color, (center_x, y_high), (center_x, top_body), 1)
             pygame.draw.line(screen, color, (center_x, bottom_body), (center_x, y_low), 1)
             pygame.draw.rect(screen, color, (x_pos, top_body, candle_width, body_height))
-        fractal_surface = pygame.Surface((1920, 1080), pygame.SRCALPHA)
+        fractal_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
         total_fractals = len(confirmed_fractals)
         for idx, frac in enumerate(confirmed_fractals):
             vis_f = frac["index"] - visible_start_global
@@ -705,8 +711,8 @@ while running:
                 seg_end = min(x + 5, x_bos_end)
                 pygame.draw.line(screen, (255, 255, 255), (x, y_level), (seg_end, y_level), 1)
             screen.blit(bos_text, text_rect)
-        hud_x = 1650
-        hud_y = 60
+        hud_x = int(SCREEN_W * 0.86)
+        hud_y = int(SCREEN_H * 0.06)
         screen.blit(font_hud_title.render("Balance:", True, (255, 255, 255)), (hud_x, hud_y))
         screen.blit(font_hud_val.render("$" + str(round(fxp_balance, 2)), True, (0, 191, 255)), (hud_x + 110, hud_y))
         screen.blit(font_hud_title.render("Wins:", True, (255, 255, 255)), (hud_x, hud_y + 50))
@@ -720,8 +726,8 @@ while running:
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
         # Botones BUY / SELL
-        buy_rect = pygame.Rect(1650, 250, 120, 45)
-        sell_rect = pygame.Rect(1790, 250, 120, 45)
+        buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
+        sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
         if active_trade is None:
             pygame.draw.rect(screen, (38, 166, 154), buy_rect, border_radius=6)
             pygame.draw.rect(screen, (239, 83, 80), sell_rect, border_radius=6)
@@ -734,14 +740,14 @@ while running:
             pygame.draw.rect(screen, (80, 80, 80), buy_rect, border_radius=6)
             pygame.draw.rect(screen, (80, 80, 80), sell_rect, border_radius=6)
             trade_txt = font_btn.render(f"{active_trade['type']} ACTIVO", True, (255, 255, 0))
-            screen.blit(trade_txt, trade_txt.get_rect(center=(1720, 272)))
+            screen.blit(trade_txt, trade_txt.get_rect(center=(hud_x + 130, hud_y + 212)))
             # Mostrar Entry, TP, SL
             entry_txt = font_trade.render(f"Entry: {active_trade['entry']:.2f}", True, (255, 255, 255))
             tp_txt = font_trade.render(f"TP: {active_trade['tp']:.2f}", True, (38, 166, 154))
             sl_txt = font_trade.render(f"SL: {active_trade['sl']:.2f}", True, (239, 83, 80))
-            screen.blit(entry_txt, (hud_x, 310))
-            screen.blit(tp_txt, (hud_x, 330))
-            screen.blit(sl_txt, (hud_x, 350))
+            screen.blit(entry_txt, (hud_x, hud_y + 250))
+            screen.blit(tp_txt, (hud_x, hud_y + 270))
+            screen.blit(sl_txt, (hud_x, hud_y + 290))
             # PnL flotante
             current_price = current_candle["close"]
             if active_trade["type"] == "BUY":
@@ -750,7 +756,7 @@ while running:
                 pnl_points = active_trade["entry"] - current_price
             pnl_color = (38, 166, 154) if pnl_points >= 0 else (239, 83, 80)
             pnl_txt = font_hud_val.render(f"PnL: {pnl_points:+.1f} pts", True, pnl_color)
-            screen.blit(pnl_txt, (hud_x, 375))
+            screen.blit(pnl_txt, (hud_x, hud_y + 315))
         # --- DIBUJAR TP/SL EN EL GRAFICO ---
         if active_trade is not None:
             tp_y = center_y - int((active_trade["tp"] - view_center_price) * vertical_zoom)
