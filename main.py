@@ -764,16 +764,19 @@ while running:
             entry_y = center_y - int((active_trade["entry"] - view_center_price) * vertical_zoom)
             # Linea de entrada (blanca punteada)
             for x in range(0, chart_end_x, 12):
-                pygame.draw.line(screen, (255, 255, 255, 180), (x, entry_y), (x + 6, entry_y), 1)
+                pygame.draw.line(screen, (255, 255, 255), (x, entry_y), (x + 6, entry_y), 1)
             # Linea TP (verde)
             for x in range(0, chart_end_x, 12):
                 pygame.draw.line(screen, (38, 166, 154), (x, tp_y), (x + 6, tp_y), 2)
             # Linea SL (roja)
             for x in range(0, chart_end_x, 12):
                 pygame.draw.line(screen, (239, 83, 80), (x, sl_y), (x + 6, sl_y), 2)
-            # Labels
-            screen.blit(font_trade.render("TP", True, (38, 166, 154)), (5, tp_y - 15))
-            screen.blit(font_trade.render("SL", True, (239, 83, 80)), (5, sl_y - 15))
-            screen.blit(font_trade.render("ENTRY", True, (255, 255, 255)), (5, entry_y - 15))
+            # Labels al final de cada linea (mismo eje Y)
+            entry_label = font_trade.render(f"ENTRY {active_trade['entry']:.2f}", True, (255, 255, 255))
+            tp_label = font_trade.render(f"TP {active_trade['tp']:.2f}", True, (38, 166, 154))
+            sl_label = font_trade.render(f"SL {active_trade['sl']:.2f}", True, (239, 83, 80))
+            screen.blit(entry_label, (chart_end_x + 5, entry_y - 8))
+            screen.blit(tp_label, (chart_end_x + 5, tp_y - 8))
+            screen.blit(sl_label, (chart_end_x + 5, sl_y - 8))
     pygame.display.flip()
 pygame.quit()
