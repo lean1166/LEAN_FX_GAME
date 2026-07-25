@@ -770,8 +770,9 @@ while running:
                 line_start_x = 0
             else:
                 line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
-            # Ancho fijo de 5 velas
-            line_end_x = min(line_start_x + int(5 * spacing), chart_end_x)
+            # Se extiende desde la entrada hasta la ultima vela visible + 5 velas adelante
+            last_candle_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + (candle_width // 2)
+            line_end_x = min(last_candle_x + int(5 * spacing), chart_end_x)
             rect_width = line_end_x - line_start_x
             if rect_width > 0:
                 # Zona TP (verde claro semi-transparente)
@@ -784,14 +785,14 @@ while running:
                 sl_surface.fill((239, 83, 80, 40))
                 sl_top = min(sl_y, entry_y)
                 screen.blit(sl_surface, (line_start_x, sl_top))
-            # Linea de entrada (blanca punteada) - solo 5 velas
+            # Linea de entrada (blanca punteada)
             for x in range(line_start_x, line_end_x, 12):
                 pygame.draw.line(screen, (255, 255, 255), (x, entry_y), (x + 6, entry_y), 1)
-            # Linea TP (verde solida) - solo 5 velas
+            # Linea TP (verde solida)
             pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
-            # Linea SL (roja solida) - solo 5 velas
+            # Linea SL (roja solida)
             pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
-            # Labels con fondo al final del rectangulo
+            # Labels con fondo al final del rectangulo (5 velas adelante)
             # Entry label
             entry_label = font_trade.render(f" {active_trade['entry']:.2f} ", True, (255, 255, 255))
             entry_bg = pygame.Rect(line_end_x + 3, entry_y - 9, entry_label.get_width(), entry_label.get_height())
