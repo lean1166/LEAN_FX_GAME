@@ -804,14 +804,36 @@ while running:
         screen.blit(font_hud_title.render("Win Rate:", True, (255, 255, 255)), (hud_x, hud_y + 150))
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
-        # --- TOP 5 VIEWERS (panel derecho, debajo del HUD) ---
-        top_y = hud_y + 200
-        top_title = font_hud_title.render("TOP 5 TRADERS", True, (255, 255, 0))
+        # --- TOP 5 VIEWERS (panel derecho, con fondo futurista) ---
+        top_y = hud_y + 420
+        # Fondo semi-transparente con borde cyan
+        top_panel_w = int(SCREEN_W * 0.13)
+        top_panel_h = 160
+        top_panel = pygame.Surface((top_panel_w, top_panel_h), pygame.SRCALPHA)
+        top_panel.fill((10, 20, 30, 180))
+        screen.blit(top_panel, (hud_x - 5, top_y - 5))
+        pygame.draw.rect(screen, (0, 191, 255), (hud_x - 5, top_y - 5, top_panel_w, top_panel_h), 1)
+        # Titulo
+        top_title = font_hud_title.render("TOP 5 TRADERS", True, (0, 191, 255))
         screen.blit(top_title, (hud_x, top_y))
+        # Lista
         for i, viewer in enumerate(top_viewers):
-            rank_color = (255, 215, 0) if i == 0 else (192, 192, 192) if i == 1 else (205, 127, 50) if i == 2 else (255, 255, 255)
-            rank_txt = font_top.render(f"#{i+1} {viewer['name']}  ${viewer['balance']}", True, rank_color)
-            screen.blit(rank_txt, (hud_x, top_y + 25 + (i * 20)))
+            if i == 0:
+                rank_color = (255, 215, 0)
+                prefix = "1."
+            elif i == 1:
+                rank_color = (192, 192, 192)
+                prefix = "2."
+            elif i == 2:
+                rank_color = (205, 127, 50)
+                prefix = "3."
+            else:
+                rank_color = (150, 150, 150)
+                prefix = f"{i+1}."
+            rank_txt = font_top.render(f"{prefix} {viewer['name']}", True, rank_color)
+            bal_txt = font_top.render(f"${viewer['balance']}", True, (0, 191, 255))
+            screen.blit(rank_txt, (hud_x + 2, top_y + 25 + (i * 25)))
+            screen.blit(bal_txt, (hud_x + top_panel_w - 70, top_y + 25 + (i * 25)))
         # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
         sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
