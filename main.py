@@ -771,7 +771,8 @@ while running:
             else:
                 line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
             # El indicador siempre termina 5 velas adelante de la ultima vela visible
-            line_end_x = min(int(start_x + ((len(visible_candles) - 1 + 5) * spacing)), chart_end_x)
+            last_candle_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
+            line_end_x = last_candle_x + int(5 * spacing)
             rect_width = line_end_x - line_start_x
             if rect_width > 0:
                 # Zona TP (verde claro semi-transparente)
