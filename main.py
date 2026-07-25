@@ -87,7 +87,7 @@ zone_time_left = 0.0
 active_trade = None
 TRADE_RISK = 100  # Siempre pierdes $100, sin importar el tamaño del SL
 TP_MULTIPLIER = 3.0  # Risk:Reward 1:3
-SL_BUFFER = 5.0  # Pips de respiro para el SL
+SL_BUFFER = 10.0  # Pips de respiro para el SL
 TIMER_DURATION = 10000  # 10 segundos en ms (temporal para pruebas)
 trade_history = []
 font_btn = pygame.font.SysFont("Arial", 20, bold=True)
