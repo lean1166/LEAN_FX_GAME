@@ -822,7 +822,7 @@ while running:
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
             # Posición: pegado al borde derecho
-            panel_x = SCREEN_W - panel_w + 10
+            panel_x = SCREEN_W - panel_w + 30
             panel_y = int(SCREEN_H * 0.22)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Texto dinámico sobre cada tarjeta
