@@ -805,53 +805,58 @@ while running:
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
         # --- TOP 5 VIEWERS (plantilla PNG + texto dinámico) ---
-        top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
+        top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.jpg")
+        if not os.path.exists(top_panel_path):
+            top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
         if not hasattr(pygame, '_top5_panel_loaded'):
             pygame._top5_panel_loaded = True
             if os.path.exists(top_panel_path):
                 pygame._top5_img = pygame.image.load(top_panel_path).convert_alpha()
             else:
                 pygame._top5_img = None
-                print(f"[AVISO] Panel TOP 5 no encontrado: {top_panel_path}")
+                print(f"[AVISO] Panel TOP 5 no encontrado")
         top5_img = pygame._top5_img
         if top5_img is not None:
-            # Escalar: más pequeño para que entre bien en 1366x768
-            panel_h = int(SCREEN_H * 0.38)
+            # Escalar vertical para el panel derecho
+            panel_h = int(SCREEN_H * 0.75)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
-            # Posición: derecha abajo
-            panel_x = SCREEN_W - panel_w - 10
-            panel_y = int(SCREEN_H * 0.58)
+            # Posición: derecha, debajo del HUD
+            panel_x = SCREEN_W - panel_w - 5
+            panel_y = int(SCREEN_H * 0.22)
             screen.blit(top5_scaled, (panel_x, panel_y))
-            # Texto dinámico sobre cada barra
-            # Ajustado visualmente para la plantilla: título ~20%, barras empiezan al 22%
-            # Cada barra ocupa ~14.5% del panel con gaps
-            title_offset = panel_h * 0.22
-            bar_h = panel_h * 0.155
-            bar_gap = panel_h * 0.005
+            # Texto dinámico sobre cada tarjeta
+            # Título TOP 5 ocupa ~8% arriba
+            # Cada tarjeta ocupa ~17.5% del panel (nombre arriba, W/L/Win% abajo)
+            title_offset = panel_h * 0.09
+            card_h = panel_h * 0.18
+            card_gap = panel_h * 0.005
             for i, viewer in enumerate(top_viewers):
-                # Centro Y de cada barra
-                bar_cy = panel_y + title_offset + (i * (bar_h + bar_gap)) + (bar_h * 0.5)
-                # Nombre (después del ícono de ranking ~28% desde la izquierda)
-                name_x = panel_x + int(panel_w * 0.28)
-                name_txt = font_top.render(viewer['name'], True, (255, 255, 255))
-                screen.blit(name_txt, (name_x, int(bar_cy - name_txt.get_height() // 2)))
-                # W (wins)
-                w_x = panel_x + int(panel_w * 0.58)
+                # Y de inicio de cada tarjeta
+                card_y = panel_y + title_offset + (i * (card_h + card_gap))
+                # Nombre (al lado del número de ranking, parte superior de la tarjeta)
+                name_x = panel_x + int(panel_w * 0.30)
+                name_y = int(card_y + card_h * 0.15)
+                name_txt = font_hud_title.render(viewer['name'], True, (255, 255, 255))
+                screen.blit(name_txt, (name_x, name_y))
+                # W, L, Win% (parte inferior de la tarjeta, en las 3 cajitas)
+                stats_y = int(card_y + card_h * 0.60)
+                # W
+                w_x = panel_x + int(panel_w * 0.15)
                 w_val = viewer.get('wins', 0)
-                w_txt = font_top.render(f"W:{w_val}", True, (38, 166, 154))
-                screen.blit(w_txt, (w_x, int(bar_cy - w_txt.get_height() // 2)))
-                # L (losses)
-                l_x = panel_x + int(panel_w * 0.72)
+                w_txt = font_top.render(str(w_val), True, (38, 166, 154))
+                screen.blit(w_txt, (w_x, stats_y))
+                # L
+                l_x = panel_x + int(panel_w * 0.45)
                 l_val = viewer.get('losses', 0)
-                l_txt = font_top.render(f"L:{l_val}", True, (239, 83, 80))
-                screen.blit(l_txt, (l_x, int(bar_cy - l_txt.get_height() // 2)))
+                l_txt = font_top.render(str(l_val), True, (239, 83, 80))
+                screen.blit(l_txt, (l_x, stats_y))
                 # Win%
-                wr_x = panel_x + int(panel_w * 0.86)
+                wr_x = panel_x + int(panel_w * 0.72)
                 total = w_val + l_val
                 wr_val = int((w_val / total * 100)) if total > 0 else 0
                 wr_txt = font_top.render(f"{wr_val}%", True, (0, 220, 255))
-                screen.blit(wr_txt, (wr_x, int(bar_cy - wr_txt.get_height() // 2)))
+                screen.blit(wr_txt, (wr_x, stats_y))
         # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
         sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
