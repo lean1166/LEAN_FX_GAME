@@ -836,11 +836,11 @@ while running:
                 card_y = panel_y + title_offset + (i * (card_h + card_gap))
                 # Nombre (al lado del número de ranking)
                 name_x = panel_x + int(panel_w * 0.30)
-                name_y = int(card_y + card_h * 0.22)
+                name_y = int(card_y + card_h * 0.28)
                 name_txt = font_hud_title.render(viewer['name'], True, (255, 255, 255))
                 screen.blit(name_txt, (name_x, name_y))
                 # W, L, Win% (dentro de las cajitas, ~80% del alto de la tarjeta)
-                stats_y = int(card_y + card_h * 0.80)
+                stats_y = int(card_y + card_h * 0.85)
                 # W
                 w_x = panel_x + int(panel_w * 0.18)
                 w_val = viewer.get('wins', 0)
