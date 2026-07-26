@@ -785,25 +785,25 @@ while running:
                 pygame.draw.line(screen, (255, 255, 255), (x, y_level), (seg_end, y_level), 1)
             screen.blit(bos_text, text_rect)
         hud_x = int(SCREEN_W * 0.86)
-        hud_y = int(SCREEN_H * 0.06)
+        hud_y = int(SCREEN_H * 0.02)
         # --- AVATAR + NOMBRE ---
         if avatar_img is not None:
-            screen.blit(avatar_img, (hud_x, hud_y - 55))
-        name_txt = font_hud_val.render(STREAMER_NAME, True, (0, 191, 255))
-        screen.blit(name_txt, (hud_x + 55, hud_y - 45))
-        # --- STATS ---
-        screen.blit(font_hud_title.render("Balance:", True, (255, 255, 255)), (hud_x, hud_y))
-        screen.blit(font_hud_val.render("$" + str(round(fxp_balance, 2)), True, (0, 191, 255)), (hud_x + 110, hud_y))
-        screen.blit(font_hud_title.render("Wins:", True, (255, 255, 255)), (hud_x, hud_y + 50))
-        screen.blit(font_hud_val.render(str(wins), True, (38, 166, 154)), (hud_x + 110, hud_y + 50))
-        screen.blit(font_hud_title.render("Losses:", True, (255, 255, 255)), (hud_x, hud_y + 100))
-        screen.blit(font_hud_val.render(str(losses), True, (239, 83, 80)), (hud_x + 110, hud_y + 100))
-        # Win Rate
+            screen.blit(avatar_img, (hud_x, hud_y))
+        name_txt = font_hud_title.render(STREAMER_NAME, True, (0, 191, 255))
+        screen.blit(name_txt, (hud_x + 55, hud_y + 15))
+        # --- STATS (compacto) ---
+        stat_y = hud_y + 55
+        screen.blit(font_top.render("Balance:", True, (255, 255, 255)), (hud_x, stat_y))
+        screen.blit(font_top.render("$" + str(round(fxp_balance, 2)), True, (0, 191, 255)), (hud_x + 70, stat_y))
+        screen.blit(font_top.render("Wins:", True, (255, 255, 255)), (hud_x, stat_y + 20))
+        screen.blit(font_top.render(str(wins), True, (38, 166, 154)), (hud_x + 70, stat_y + 20))
+        screen.blit(font_top.render("Losses:", True, (255, 255, 255)), (hud_x, stat_y + 40))
+        screen.blit(font_top.render(str(losses), True, (239, 83, 80)), (hud_x + 70, stat_y + 40))
         total_trades = wins + losses
         win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
-        screen.blit(font_hud_title.render("Win Rate:", True, (255, 255, 255)), (hud_x, hud_y + 150))
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
-        screen.blit(font_hud_val.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 110, hud_y + 150))
+        screen.blit(font_top.render("WR:", True, (255, 255, 255)), (hud_x, stat_y + 60))
+        screen.blit(font_top.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 70, stat_y + 60))
         # --- TOP 5 VIEWERS (plantilla PNG + texto dinámico) ---
         top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.jpg")
         if not os.path.exists(top_panel_path):
@@ -821,8 +821,8 @@ while running:
             panel_h = int(SCREEN_H * 0.75)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
-            # Posición: derecha, debajo del HUD
-            panel_x = SCREEN_W - panel_w - 5
+            # Posición: pegado a la derecha
+            panel_x = SCREEN_W - panel_w
             panel_y = int(SCREEN_H * 0.22)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Texto dinámico sobre cada tarjeta
