@@ -824,29 +824,30 @@ while running:
             panel_y = int(SCREEN_H * 0.58)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Texto dinámico sobre cada barra
-            # El título "TOP 5" ocupa ~18% arriba, luego 5 barras en el 82% restante
-            title_offset = panel_h * 0.18
-            bar_area = panel_h * 0.82
-            bar_h = bar_area / 5
+            # Ajustado visualmente para la plantilla: título ~20%, barras empiezan al 22%
+            # Cada barra ocupa ~14.5% del panel con gaps
+            title_offset = panel_h * 0.22
+            bar_h = panel_h * 0.155
+            bar_gap = panel_h * 0.005
             for i, viewer in enumerate(top_viewers):
                 # Centro Y de cada barra
-                bar_cy = panel_y + title_offset + (i * bar_h) + (bar_h * 0.5)
-                # Nombre (después del número de ranking que ya está en la imagen)
-                name_x = panel_x + int(panel_w * 0.15)
+                bar_cy = panel_y + title_offset + (i * (bar_h + bar_gap)) + (bar_h * 0.5)
+                # Nombre (después del ícono de ranking ~28% desde la izquierda)
+                name_x = panel_x + int(panel_w * 0.28)
                 name_txt = font_top.render(viewer['name'], True, (255, 255, 255))
                 screen.blit(name_txt, (name_x, int(bar_cy - name_txt.get_height() // 2)))
                 # W (wins)
-                w_x = panel_x + int(panel_w * 0.55)
+                w_x = panel_x + int(panel_w * 0.58)
                 w_val = viewer.get('wins', 0)
                 w_txt = font_top.render(f"W:{w_val}", True, (38, 166, 154))
                 screen.blit(w_txt, (w_x, int(bar_cy - w_txt.get_height() // 2)))
                 # L (losses)
-                l_x = panel_x + int(panel_w * 0.70)
+                l_x = panel_x + int(panel_w * 0.72)
                 l_val = viewer.get('losses', 0)
                 l_txt = font_top.render(f"L:{l_val}", True, (239, 83, 80))
                 screen.blit(l_txt, (l_x, int(bar_cy - l_txt.get_height() // 2)))
                 # Win%
-                wr_x = panel_x + int(panel_w * 0.84)
+                wr_x = panel_x + int(panel_w * 0.86)
                 total = w_val + l_val
                 wr_val = int((w_val / total * 100)) if total > 0 else 0
                 wr_txt = font_top.render(f"{wr_val}%", True, (0, 220, 255))
