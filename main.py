@@ -815,32 +815,32 @@ while running:
                 print(f"[AVISO] Panel TOP 5 no encontrado: {top_panel_path}")
         top5_img = pygame._top5_img
         if top5_img is not None:
-            # Escalar al tamaño deseado
-            panel_h = int(SCREEN_H * 0.45)
+            # Escalar: más pequeño para que entre bien en 1366x768
+            panel_h = int(SCREEN_H * 0.38)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
             # Posición: derecha abajo
-            panel_x = int(SCREEN_W * 0.73)
-            panel_y = int(SCREEN_H * 0.52)
+            panel_x = SCREEN_W - panel_w - 10
+            panel_y = int(SCREEN_H * 0.58)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Texto dinámico sobre cada barra
-            # El título "TOP 5" ocupa ~15% arriba, luego 5 barras distribuidas en el 85% restante
-            title_offset = panel_h * 0.15
-            bar_area = panel_h * 0.85
+            # El título "TOP 5" ocupa ~18% arriba, luego 5 barras en el 82% restante
+            title_offset = panel_h * 0.18
+            bar_area = panel_h * 0.82
             bar_h = bar_area / 5
             for i, viewer in enumerate(top_viewers):
                 # Centro Y de cada barra
                 bar_cy = panel_y + title_offset + (i * bar_h) + (bar_h * 0.5)
-                # Nombre (centro-izquierda, después del ícono de ranking)
-                name_x = panel_x + int(panel_w * 0.18)
-                name_txt = font_hud_title.render(viewer['name'], True, (255, 255, 255))
+                # Nombre (después del número de ranking que ya está en la imagen)
+                name_x = panel_x + int(panel_w * 0.15)
+                name_txt = font_top.render(viewer['name'], True, (255, 255, 255))
                 screen.blit(name_txt, (name_x, int(bar_cy - name_txt.get_height() // 2)))
-                # W
+                # W (wins)
                 w_x = panel_x + int(panel_w * 0.55)
                 w_val = viewer.get('wins', 0)
                 w_txt = font_top.render(f"W:{w_val}", True, (38, 166, 154))
                 screen.blit(w_txt, (w_x, int(bar_cy - w_txt.get_height() // 2)))
-                # L
+                # L (losses)
                 l_x = panel_x + int(panel_w * 0.70)
                 l_val = viewer.get('losses', 0)
                 l_txt = font_top.render(f"L:{l_val}", True, (239, 83, 80))
