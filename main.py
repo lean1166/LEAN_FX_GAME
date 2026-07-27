@@ -122,6 +122,7 @@ zone_frozen = False  # True cuando el gráfico está congelado
 zone_timer_start = 0  # Momento en que se activó el timer
 zone_detected = None  # Info de la zona detectada {"high", "low", "type"}
 trade_decided = False  # Si ya eligió BUY o SELL durante el timer
+zones_mitigated = set()  # Zonas ya mitigadas (no se repiten)
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -543,27 +544,33 @@ while running:
                         trade_loss(TRADE_RISK)
                         trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
                         active_trade = None
-            # --- DETECTAR SI PRECIO LLEGA A UNA ZONA ---
+            # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
             if active_trade is None and not zone_frozen:
                 price_now = current_candle["close"]
                 # Verificar Order Block activo
                 if active_ob is not None:
-                    if active_ob["low"] <= price_now <= active_ob["high"]:
+                    zone_id = f"ob_{active_ob['index']}"
+                    if zone_id not in zones_mitigated and active_ob["low"] <= price_now <= active_ob["high"]:
                         zone_frozen = True
                         zone_timer_start = current_time
                         zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"]}
+                        zones_mitigated.add(zone_id)
                 # Verificar Decisional
                 if not zone_frozen and active_decisional is not None:
-                    if active_decisional["low"] <= price_now <= active_decisional["high"]:
+                    zone_id = f"dec_{active_decisional['index']}"
+                    if zone_id not in zones_mitigated and active_decisional["low"] <= price_now <= active_decisional["high"]:
                         zone_frozen = True
                         zone_timer_start = current_time
                         zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"]}
+                        zones_mitigated.add(zone_id)
                 # Verificar FVG
                 if not zone_frozen and active_fvg is not None:
-                    if active_fvg["low"] <= price_now <= active_fvg["high"]:
+                    zone_id = f"fvg_{active_fvg['index']}"
+                    if zone_id not in zones_mitigated and active_fvg["low"] <= price_now <= active_fvg["high"]:
                         zone_frozen = True
                         zone_timer_start = current_time
                         zone_detected = {"high": active_fvg["high"], "low": active_fvg["low"], "type": active_fvg["type"]}
+                        zones_mitigated.add(zone_id)
     if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
         candles.append(current_candle.copy())
         if len(candles) > 1000:
