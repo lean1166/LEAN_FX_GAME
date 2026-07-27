@@ -1057,5 +1057,23 @@ while running:
             sl_bg = pygame.Rect(line_end_x + 3, sl_y - 9, sl_label.get_width(), sl_label.get_height())
             pygame.draw.rect(screen, (239, 83, 80), sl_bg)
             screen.blit(sl_label, sl_bg)
+    # --- FLASH AL GANAR/PERDER ---
+    if flash_active:
+        flash_elapsed = current_time - flash_start_time
+        if flash_elapsed >= FLASH_DURATION:
+            flash_active = False
+        else:
+            # Fade out (opacidad disminuye)
+            alpha = max(0, 180 - int(180 * (flash_elapsed / FLASH_DURATION)))
+            # Flash de pantalla completa
+            flash_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+            flash_surface.fill((flash_color[0], flash_color[1], flash_color[2], alpha // 3))
+            screen.blit(flash_surface, (0, 0))
+            # Texto grande en el centro
+            font_flash = pygame.font.SysFont("Arial", int(SCREEN_H * 0.08), bold=True)
+            flash_txt = font_flash.render(flash_text, True, (flash_color[0], flash_color[1], flash_color[2]))
+            flash_txt.set_alpha(alpha)
+            flash_rect = flash_txt.get_rect(center=(int(SCREEN_W * 0.40), int(SCREEN_H * 0.45)))
+            screen.blit(flash_txt, flash_rect)
     pygame.display.flip()
 pygame.quit()
