@@ -486,12 +486,14 @@ menu_selection = None
 
 # Cargar imagen de fondo del menú
 menu_bg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "menu_bg.png")
+if not os.path.exists(menu_bg_path):
+    menu_bg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "menu_bg.jpg")
 menu_bg = None
 if os.path.exists(menu_bg_path):
     menu_bg = pygame.image.load(menu_bg_path).convert()
     menu_bg = pygame.transform.smoothscale(menu_bg, (SCREEN_W, SCREEN_H))
 else:
-    print("[AVISO] menu_bg.png no encontrado")
+    print("[AVISO] menu_bg no encontrado")
 
 # Efecto click
 menu_click_btn = None  # Nombre del botón clickeado
