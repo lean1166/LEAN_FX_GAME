@@ -478,6 +478,71 @@ while len(bos_markers) < 2:
 
 current_candle = {"open": candles[-1]["close"], "close": candles[-1]["close"], "high": candles[-1]["close"], "low": candles[-1]["close"]}
 
+# === MENÚ DE INICIO ===
+font_menu_title = pygame.font.SysFont("Arial", 60, bold=True)
+font_menu_btn = pygame.font.SysFont("Arial", 28, bold=True)
+in_menu = True
+menu_selection = None
+
+while in_menu and running:
+    clock.tick(60)
+    screen.fill((15, 15, 25))
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            in_menu = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
+                in_menu = False
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            if btn_iniciar.collidepoint(mx, my):
+                in_menu = False
+            elif btn_ranking.collidepoint(mx, my):
+                menu_selection = "ranking"
+            elif btn_config.collidepoint(mx, my):
+                menu_selection = "config"
+    # Logo LEAN FX arriba
+    if avatar_img is not None:
+        logo_size = 120
+        logo_scaled = pygame.transform.smoothscale(avatar_img, (logo_size, logo_size))
+        screen.blit(logo_scaled, (SCREEN_W // 2 - logo_size // 2, int(SCREEN_H * 0.08)))
+    # Título
+    title_surf = font_menu_title.render("LEAN FX GAME", True, (0, 220, 255))
+    title_rect = title_surf.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.28)))
+    screen.blit(title_surf, title_rect)
+    # Subtítulo
+    sub_surf = font_top.render("Simulador de Trading Interactivo", True, (150, 150, 150))
+    sub_rect = sub_surf.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.34)))
+    screen.blit(sub_surf, sub_rect)
+    # Botones
+    btn_w, btn_h = 280, 55
+    btn_x = SCREEN_W // 2 - btn_w // 2
+    # INICIAR
+    btn_iniciar = pygame.Rect(btn_x, int(SCREEN_H * 0.45), btn_w, btn_h)
+    pygame.draw.rect(screen, (0, 180, 220), btn_iniciar, border_radius=8)
+    pygame.draw.rect(screen, (0, 220, 255), btn_iniciar, 2, border_radius=8)
+    ini_txt = font_menu_btn.render("INICIAR", True, (255, 255, 255))
+    screen.blit(ini_txt, ini_txt.get_rect(center=btn_iniciar.center))
+    # RANKING
+    btn_ranking = pygame.Rect(btn_x, int(SCREEN_H * 0.58), btn_w, btn_h)
+    pygame.draw.rect(screen, (30, 30, 50), btn_ranking, border_radius=8)
+    pygame.draw.rect(screen, (0, 180, 220), btn_ranking, 2, border_radius=8)
+    rank_txt = font_menu_btn.render("RANKING", True, (0, 220, 255))
+    screen.blit(rank_txt, rank_txt.get_rect(center=btn_ranking.center))
+    # CONFIGURACIÓN
+    btn_config = pygame.Rect(btn_x, int(SCREEN_H * 0.71), btn_w, btn_h)
+    pygame.draw.rect(screen, (30, 30, 50), btn_config, border_radius=8)
+    pygame.draw.rect(screen, (0, 180, 220), btn_config, 2, border_radius=8)
+    cfg_txt = font_menu_btn.render("CONFIGURACIÓN", True, (0, 220, 255))
+    screen.blit(cfg_txt, cfg_txt.get_rect(center=btn_config.center))
+    # Info abajo
+    ver_txt = font_top.render("v1.0 | @lean_fx", True, (80, 80, 80))
+    screen.blit(ver_txt, ver_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.92))))
+    pygame.display.flip()
+
+# === GAME LOOP ===
 while running:
     clock.tick(60)
     current_time = pygame.time.get_ticks()
