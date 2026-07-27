@@ -1003,7 +1003,8 @@ while running:
             else:
                 pnl_points = active_trade["entry"] - current_price
             pnl_color = (38, 166, 154) if pnl_points >= 0 else (239, 83, 80)
-            pnl_txt = font_hud_val.render(f"PnL: {pnl_points:+.1f} pts", True, pnl_color)
+            pnl_pct = (pnl_points / active_trade["entry"]) * 100
+            pnl_txt = font_hud_val.render(f"PnL: {pnl_pct:+.1f}%", True, pnl_color)
             screen.blit(pnl_txt, (btn_x, btn_y + 138))
         # --- DIBUJAR TP/SL EN EL GRAFICO ---
         if active_trade is not None:
