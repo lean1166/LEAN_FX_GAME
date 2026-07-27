@@ -982,6 +982,10 @@ while running:
             zone_label = font_btn.render("ZONA DETECTADA - DECIDE!", True, (255, 255, 0))
             zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.42), int(SCREEN_H * 0.17)))
             screen.blit(zone_label, zone_rect)
+            # Texto para viewers
+            chat_label = font_top.render("ESCRIBE BUY O SELL EN EL CHAT", True, (200, 200, 200))
+            chat_rect = chat_label.get_rect(center=(int(SCREEN_W * 0.42), int(SCREEN_H * 0.20)))
+            screen.blit(chat_label, chat_rect)
         elif active_trade is not None:
             # Iluminar el botón que se eligió
             if active_trade["type"] == "BUY":
