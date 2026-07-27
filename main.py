@@ -32,6 +32,7 @@ sound_fractal = load_sound("FRACTAL.mp3")
 sound_win = load_sound("WIN.mp3")
 sound_loss = load_sound("LOSS.mp3")
 sound_zoom = load_sound("ZOOM.mp3")
+sound_tick = load_sound("TICK.mp3")
 
 def play_sound(sound):
     if sound is not None:
