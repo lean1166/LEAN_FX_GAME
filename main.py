@@ -66,7 +66,7 @@ if os.path.exists(PROFILE_DIR):
     for f in os.listdir(PROFILE_DIR):
         if f.lower().endswith((".png", ".jpg", ".jpeg")):
             avatar_img = pygame.image.load(os.path.join(PROFILE_DIR, f)).convert_alpha()
-            avatar_img = pygame.transform.smoothscale(avatar_img, (50, 50))
+            avatar_img = pygame.transform.smoothscale(avatar_img, (200, 200))
             break
 if avatar_img is None:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
@@ -814,7 +814,7 @@ while running:
             screen.blit(sp_scaled, (sp_x, sp_y))
             # Avatar dentro del círculo
             if avatar_img is not None:
-                av_size = int(sp_h * 0.45)
+                av_size = int(sp_h * 0.35)
                 av_scaled = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
                 # Centro del círculo calibrado: (1502, 107) en 1920x1080
                 av_cx = int(SCREEN_W * (1502/1920))
@@ -845,7 +845,7 @@ while running:
             stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
             stats_positions_x = [1604/1920, 1681/1920, 1761/1920, 1844/1920]
             stats_y_pct = 139/1080
-            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.14)), bold=True)
+            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.11)), bold=True)
             for i, val in enumerate(stats_values):
                 sx = int(SCREEN_W * stats_positions_x[i])
                 sy = int(SCREEN_H * stats_y_pct)
