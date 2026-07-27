@@ -123,6 +123,12 @@ zone_timer_start = 0  # Momento en que se activó el timer
 zone_detected = None  # Info de la zona detectada {"high", "low", "type"}
 trade_decided = False  # Si ya eligió BUY o SELL durante el timer
 zones_mitigated = set()  # Zonas ya mitigadas (no se repiten)
+# Flash al ganar/perder
+flash_active = False
+flash_start_time = 0
+flash_color = (0, 0, 0)
+flash_text = ""
+FLASH_DURATION = 2000  # 2 segundos
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -531,19 +537,35 @@ while running:
                         trade_win(TRADE_RISK * TP_MULTIPLIER)
                         trade_history.append({"type": "BUY", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
                         active_trade = None
+                        flash_active = True
+                        flash_start_time = current_time
+                        flash_color = (38, 166, 154)
+                        flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                     elif current_price <= active_trade["sl"]:
                         trade_loss(TRADE_RISK)
                         trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
                         active_trade = None
+                        flash_active = True
+                        flash_start_time = current_time
+                        flash_color = (239, 83, 80)
+                        flash_text = "LOSS -1%"
                 elif active_trade["type"] == "SELL":
                     if current_price <= active_trade["tp"]:
                         trade_win(TRADE_RISK * TP_MULTIPLIER)
                         trade_history.append({"type": "SELL", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
                         active_trade = None
+                        flash_active = True
+                        flash_start_time = current_time
+                        flash_color = (38, 166, 154)
+                        flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                     elif current_price >= active_trade["sl"]:
                         trade_loss(TRADE_RISK)
                         trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
                         active_trade = None
+                        flash_active = True
+                        flash_start_time = current_time
+                        flash_color = (239, 83, 80)
+                        flash_text = "LOSS -1%"
             # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
             if active_trade is None and not zone_frozen:
                 price_now = current_candle["close"]
