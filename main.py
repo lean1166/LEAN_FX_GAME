@@ -805,8 +805,8 @@ while running:
                 print(f"[AVISO] Panel streamer no encontrado")
         streamer_img = pygame._streamer_img
         if streamer_img is not None:
-            # Escalar panel (proporción 1774x887, ancho ~30% de pantalla)
-            sp_w = int(SCREEN_W * 0.30)
+            # Escalar panel (proporción 1774x887, ancho ~25% de pantalla)
+            sp_w = int(SCREEN_W * 0.25)
             sp_h = int(sp_w * (887 / 1774))
             sp_scaled = pygame.transform.smoothscale(streamer_img, (sp_w, sp_h))
             sp_x = SCREEN_W - sp_w - 5
