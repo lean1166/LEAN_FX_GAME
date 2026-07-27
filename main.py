@@ -804,144 +804,78 @@ while running:
         wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
         screen.blit(font_top.render("WR:", True, (255, 255, 255)), (hud_x, stat_y + 60))
         screen.blit(font_top.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 70, stat_y + 60))
-        # --- TOP 5 VIEWERS (replica de imagen 1024x1536 dibujada con código) ---
-        if not hasattr(pygame, '_top5_rendered'):
-            # Crear surface 1024x1536 una sola vez
+        # --- TOP 5 VIEWERS (imagen PNG + texto con posiciones del diseño código) ---
+        top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
+        if not os.path.exists(top_panel_path):
+            top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.jpg")
+        if not hasattr(pygame, '_top5_panel_loaded2'):
+            pygame._top5_panel_loaded2 = True
+            if os.path.exists(top_panel_path):
+                pygame._top5_img2 = pygame.image.load(top_panel_path).convert_alpha()
+            else:
+                pygame._top5_img2 = None
+                print(f"[AVISO] Panel TOP 5 no encontrado")
+            # Calcular posiciones de texto basadas en la imagen 1024x1536
             PW, PH = 1024, 1536
-            top5_surface = pygame.Surface((PW, PH), pygame.SRCALPHA)
-            # === TÍTULO TOP 5 ===
-            # Marco metálico cyan
-            title_y = 0
-            title_h = 120
-            # Fondo del título
-            title_rect_inner = pygame.Rect(PW // 2 - 280, title_y + 15, 560, 90)
-            pygame.draw.polygon(top5_surface, (8, 30, 45, 240), [
-                (title_rect_inner.left + 20, title_rect_inner.top),
-                (title_rect_inner.right - 20, title_rect_inner.top),
-                (title_rect_inner.right, title_rect_inner.centery),
-                (title_rect_inner.right - 20, title_rect_inner.bottom),
-                (title_rect_inner.left + 20, title_rect_inner.bottom),
-                (title_rect_inner.left, title_rect_inner.centery),
-            ])
-            pygame.draw.polygon(top5_surface, (0, 200, 240), [
-                (title_rect_inner.left + 20, title_rect_inner.top),
-                (title_rect_inner.right - 20, title_rect_inner.top),
-                (title_rect_inner.right, title_rect_inner.centery),
-                (title_rect_inner.right - 20, title_rect_inner.bottom),
-                (title_rect_inner.left + 20, title_rect_inner.bottom),
-                (title_rect_inner.left, title_rect_inner.centery),
-            ], 3)
-            # Detalles laterales cyan
-            pygame.draw.line(top5_surface, (0, 180, 220), (80, title_y + 60), (title_rect_inner.left - 5, title_y + 60), 2)
-            pygame.draw.line(top5_surface, (0, 180, 220), (PW - 80, title_y + 60), (title_rect_inner.right + 5, title_y + 60), 2)
-            # Puntos brillantes
-            pygame.draw.circle(top5_surface, (0, 255, 255), (title_rect_inner.left + 5, title_y + 60), 5)
-            pygame.draw.circle(top5_surface, (0, 255, 255), (title_rect_inner.right - 5, title_y + 60), 5)
-            # Texto TOP 5
-            font_title_big = pygame.font.SysFont("Arial", 60, bold=True)
-            t5_txt = font_title_big.render("TOP 5", True, (0, 230, 255))
-            t5_rect = t5_txt.get_rect(center=(PW // 2, title_y + 60))
-            top5_surface.blit(t5_txt, t5_rect)
-            # === TARJETAS ===
-            card_colors = [
-                # (borde, fondo_grad_top, fondo_grad_bot)
-                ((220, 180, 0), (60, 50, 10), (30, 25, 5)),        # Oro
-                ((170, 175, 185), (40, 42, 50), (20, 22, 28)),     # Plata
-                ((210, 120, 30), (55, 35, 10), (30, 18, 5)),       # Bronce
-                ((80, 100, 120), (25, 30, 40), (15, 18, 25)),      # 4to
-                ((60, 70, 85), (20, 25, 35), (12, 15, 22)),        # 5to
-            ]
             card_start = 135
             card_h_each = 270
             card_gap = 8
             card_margin_x = 40
             card_w = PW - card_margin_x * 2
-            # Guardar posiciones para texto dinámico
-            pygame._top5_text_positions = []
+            pygame._top5_positions2 = []
             for i in range(5):
                 cy = card_start + i * (card_h_each + card_gap)
-                border_col, grad_top, grad_bot = card_colors[i]
-                # Fondo con gradiente
-                for row in range(card_h_each):
-                    t = row / card_h_each
-                    r = int(grad_top[0] * (1 - t) + grad_bot[0] * t)
-                    g = int(grad_top[1] * (1 - t) + grad_bot[1] * t)
-                    b = int(grad_top[2] * (1 - t) + grad_bot[2] * t)
-                    pygame.draw.line(top5_surface, (r, g, b, 230), (card_margin_x, cy + row), (card_margin_x + card_w, cy + row))
-                # Borde con esquinas cortadas
-                cut = 18
-                points = [
-                    (card_margin_x + cut, cy),
-                    (card_margin_x + card_w - cut, cy),
-                    (card_margin_x + card_w, cy + cut),
-                    (card_margin_x + card_w, cy + card_h_each - cut),
-                    (card_margin_x + card_w - cut, cy + card_h_each),
-                    (card_margin_x + cut, cy + card_h_each),
-                    (card_margin_x, cy + card_h_each - cut),
-                    (card_margin_x, cy + cut),
-                ]
-                pygame.draw.polygon(top5_surface, border_col, points, 3)
-                # Línea divisoria horizontal (separa nombre de stats)
                 div_y = cy + int(card_h_each * 0.48)
-                pygame.draw.line(top5_surface, (border_col[0] // 2, border_col[1] // 2, border_col[2] // 2), (card_margin_x + 15, div_y), (card_margin_x + card_w - 15, div_y), 1)
-                # Cajitas para W, L, WIN%
                 box_y = div_y + 20
                 box_h = card_h_each - (div_y - cy) - 40
                 box_w = (card_w - 60) // 3
-                for j in range(3):
-                    bx = card_margin_x + 20 + j * (box_w + 10)
-                    pygame.draw.rect(top5_surface, (border_col[0] // 3, border_col[1] // 3, border_col[2] // 3, 150), (bx, box_y, box_w, box_h))
-                    pygame.draw.rect(top5_surface, border_col, (bx, box_y, box_w, box_h), 1)
-                # Guardar posiciones para texto
-                # nombre_pos: centro de la mitad superior
-                name_pos = (card_margin_x + card_w // 2, cy + int(card_h_each * 0.25))
-                # stats_pos: centro de cada cajita
+                name_pos = (PW // 2, cy + int(card_h_each * 0.25))
                 stats_positions = []
                 for j in range(3):
                     bx = card_margin_x + 20 + j * (box_w + 10)
                     stats_positions.append((bx + box_w // 2, box_y + box_h // 2))
-                pygame._top5_text_positions.append({"name": name_pos, "stats": stats_positions, "rank_y": cy + 25})
-            pygame._top5_rendered = top5_surface
-        # Escalar y dibujar
-        top5_base = pygame._top5_rendered
-        panel_h = int(SCREEN_H * 0.68)
-        panel_w = int(panel_h * (1024 / 1536))
-        top5_scaled = pygame.transform.smoothscale(top5_base, (panel_w, panel_h))
-        panel_x = SCREEN_W - panel_w + 15
-        panel_y = int(SCREEN_H * 0.22)
-        screen.blit(top5_scaled, (panel_x, panel_y))
-        # Texto dinámico (escalado)
-        scale_x = panel_w / 1024
-        scale_y = panel_h / 1536
-        font_name_top5 = pygame.font.SysFont("Arial", max(12, int(16 * scale_y * 2.5)), bold=True)
-        font_stat_top5 = pygame.font.SysFont("Arial", max(10, int(14 * scale_y * 2.5)), bold=True)
-        stat_labels = ["W", "L", "WIN%"]
-        for i, viewer in enumerate(top_viewers):
-            pos = pygame._top5_text_positions[i]
-            # Nombre
-            nx = panel_x + int(pos["name"][0] * scale_x)
-            ny = panel_y + int(pos["name"][1] * scale_y)
-            n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
-            n_rect = n_txt.get_rect(center=(nx, ny))
-            screen.blit(n_txt, n_rect)
-            # Stats
-            w_val = viewer.get('wins', 0)
-            l_val = viewer.get('losses', 0)
-            total = w_val + l_val
-            wr_val = int((w_val / total * 100)) if total > 0 else 0
-            stat_vals = [str(w_val), str(l_val), f"{wr_val}%"]
-            stat_colors = [(38, 166, 154), (239, 83, 80), (0, 220, 255)]
-            for j in range(3):
-                sx = panel_x + int(pos["stats"][j][0] * scale_x)
-                sy = panel_y + int(pos["stats"][j][1] * scale_y)
-                # Label arriba
-                lbl = font_stat_top5.render(stat_labels[j], True, (150, 150, 150))
-                lbl_rect = lbl.get_rect(center=(sx, sy - int(10 * scale_y)))
-                screen.blit(lbl, lbl_rect)
-                # Valor abajo
-                val = font_stat_top5.render(stat_vals[j], True, stat_colors[j])
-                val_rect = val.get_rect(center=(sx, sy + int(10 * scale_y)))
-                screen.blit(val, val_rect)
+                pygame._top5_positions2.append({"name": name_pos, "stats": stats_positions})
+        top5_img = pygame._top5_img2
+        if top5_img is not None:
+            # Escalar
+            panel_h = int(SCREEN_H * 0.68)
+            panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
+            top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
+            panel_x = SCREEN_W - panel_w + 15
+            panel_y = int(SCREEN_H * 0.22)
+            screen.blit(top5_scaled, (panel_x, panel_y))
+            # Texto dinámico con posiciones calculadas
+            scale_x = panel_w / 1024
+            scale_y = panel_h / 1536
+            font_name_top5 = pygame.font.SysFont("Arial", max(12, int(16 * scale_y * 2.5)), bold=True)
+            font_stat_top5 = pygame.font.SysFont("Arial", max(10, int(14 * scale_y * 2.5)), bold=True)
+            stat_labels = ["W", "L", "WIN%"]
+            for i, viewer in enumerate(top_viewers):
+                pos = pygame._top5_positions2[i]
+                # Nombre
+                nx = panel_x + int(pos["name"][0] * scale_x)
+                ny = panel_y + int(pos["name"][1] * scale_y)
+                n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
+                n_rect = n_txt.get_rect(center=(nx, ny))
+                screen.blit(n_txt, n_rect)
+                # Stats
+                w_val = viewer.get('wins', 0)
+                l_val = viewer.get('losses', 0)
+                total = w_val + l_val
+                wr_val = int((w_val / total * 100)) if total > 0 else 0
+                stat_vals = [str(w_val), str(l_val), f"{wr_val}%"]
+                stat_colors = [(38, 166, 154), (239, 83, 80), (0, 220, 255)]
+                for j in range(3):
+                    sx = panel_x + int(pos["stats"][j][0] * scale_x)
+                    sy = panel_y + int(pos["stats"][j][1] * scale_y)
+                    # Label arriba
+                    lbl = font_stat_top5.render(stat_labels[j], True, (150, 150, 150))
+                    lbl_rect = lbl.get_rect(center=(sx, sy - int(10 * scale_y)))
+                    screen.blit(lbl, lbl_rect)
+                    # Valor abajo
+                    val = font_stat_top5.render(stat_vals[j], True, stat_colors[j])
+                    val_rect = val.get_rect(center=(sx, sy + int(10 * scale_y)))
+                    screen.blit(val, val_rect)
         # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
         sell_rect = pygame.Rect(hud_x + 140, hud_y + 190, 120, 45)
