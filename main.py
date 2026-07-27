@@ -818,9 +818,9 @@ while running:
                 print(f"[AVISO] Panel TOP 5 no encontrado")
         top5_img = pygame._top5_img2
         if top5_img is not None:
-            # Escalar - estirar verticalmente para más espacio en cajitas
-            panel_w = int(SCREEN_W * 0.16)  # Ancho fijo
-            panel_h = int(SCREEN_H * 0.78)  # Alto estirado
+            # Escalar
+            panel_h = int(SCREEN_H * 0.68)
+            panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
             panel_x = SCREEN_W - panel_w + 15
             panel_y = int(SCREEN_H * 0.22)
