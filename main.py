@@ -891,7 +891,7 @@ while running:
             panel_h = int(SCREEN_H * 0.75)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
-            panel_x = SCREEN_W - panel_w + 30
+            panel_x = SCREEN_W - panel_w + 50
             panel_y = int(SCREEN_H * 0.20)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Posiciones calibradas con 20 clicks en 1920x1080
