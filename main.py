@@ -814,7 +814,7 @@ while running:
             screen.blit(sp_scaled, (sp_x, sp_y))
             # Avatar dentro del círculo
             if avatar_img is not None:
-                av_size = int(sp_h * 0.50)
+                av_size = int(sp_h * 0.35)
                 av_scaled = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
                 # Centro del círculo calibrado: (1550, 89) en 1920x1080
                 av_cx = sp_x + int(sp_w * ((1550 - (SCREEN_W - sp_w - 5)) / sp_w))
@@ -845,7 +845,7 @@ while running:
             stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
             stats_positions_x = [1645/1920, 1711/1920, 1778/1920, 1853/1920]
             stats_y_pct = 120/1080
-            font_stat_s = pygame.font.SysFont("Arial", max(10, int(sp_h * 0.18)), bold=True)
+            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.12)), bold=True)
             for i, val in enumerate(stats_values):
                 sx = int(SCREEN_W * stats_positions_x[i])
                 sy = int(SCREEN_H * stats_y_pct)
