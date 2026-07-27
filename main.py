@@ -819,11 +819,11 @@ while running:
         top5_img = pygame._top5_img2
         if top5_img is not None:
             # Escalar
-            panel_h = int(SCREEN_H * 0.68)
+            panel_h = int(SCREEN_H * 0.75)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
-            panel_x = SCREEN_W - panel_w + 15
-            panel_y = int(SCREEN_H * 0.22)
+            panel_x = SCREEN_W - panel_w + 5
+            panel_y = int(SCREEN_H * 0.20)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Posiciones calibradas en 1920x1080:
             # Nombre1: (1703, 378), W1: (1584, 451), L1: (1695, 453), WIN%1: (1805, 449)
