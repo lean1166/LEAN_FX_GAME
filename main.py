@@ -996,15 +996,17 @@ while running:
                 sell_txt = font_btn.render("SELL", True, (255, 255, 255))
             screen.blit(buy_txt, buy_txt.get_rect(center=buy_rect.center))
             screen.blit(sell_txt, sell_txt.get_rect(center=sell_rect.center))
-            # Info del trade debajo de los botones
+            # Info del trade a la izquierda
+            info_x = int(SCREEN_W * 0.05)
+            info_y = int(SCREEN_H * 0.03)
             trade_txt = font_btn.render(f"{active_trade['type']} ACTIVO", True, (255, 255, 0))
-            screen.blit(trade_txt, trade_txt.get_rect(center=(btn_x + 130, btn_y + 60)))
+            screen.blit(trade_txt, (info_x, info_y))
             entry_txt = font_trade.render(f"Entry: {active_trade['entry']:.2f}", True, (255, 255, 255))
             tp_txt = font_trade.render(f"TP: +{TP_MULTIPLIER:.0f}%", True, (38, 166, 154))
             sl_txt = font_trade.render(f"SL: -1%", True, (239, 83, 80))
-            screen.blit(entry_txt, (btn_x, btn_y + 80))
-            screen.blit(tp_txt, (btn_x, btn_y + 98))
-            screen.blit(sl_txt, (btn_x, btn_y + 116))
+            screen.blit(entry_txt, (info_x, info_y + 25))
+            screen.blit(tp_txt, (info_x, info_y + 43))
+            screen.blit(sl_txt, (info_x, info_y + 61))
             # PnL flotante
             current_price = current_candle["close"]
             if active_trade["type"] == "BUY":
@@ -1014,7 +1016,7 @@ while running:
             pnl_color = (38, 166, 154) if pnl_points >= 0 else (239, 83, 80)
             pnl_pct = (pnl_points / active_trade["entry"]) * 100
             pnl_txt = font_hud_val.render(f"PnL: {pnl_pct:+.1f}%", True, pnl_color)
-            screen.blit(pnl_txt, (btn_x, btn_y + 138))
+            screen.blit(pnl_txt, (info_x, info_y + 80))
         # --- DIBUJAR TP/SL EN EL GRAFICO ---
         if active_trade is not None:
             tp_y = center_y - int((active_trade["tp"] - view_center_price) * vertical_zoom)
