@@ -771,27 +771,6 @@ while running:
             pygame.draw.line(screen, color, (center_x, y_high), (center_x, top_body), 1)
             pygame.draw.line(screen, color, (center_x, bottom_body), (center_x, y_low), 1)
             pygame.draw.rect(screen, color, (x_pos, top_body, candle_width, body_height))
-        # --- PRECIO ACTUAL (label que se mueve al borde derecho) ---
-        current_price_now = current_candle["close"]
-        price_y = center_y - int((current_price_now - view_center_price) * vertical_zoom)
-        # Color según dirección
-        if len(candles) >= 2:
-            prev_close = candles[-1]["close"]
-            price_color = (38, 166, 154) if current_price_now >= prev_close else (239, 83, 80)
-        else:
-            price_color = (200, 200, 200)
-        # Línea punteada horizontal desde la última vela hasta el label
-        last_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
-        for px in range(last_x, int(SCREEN_W * 0.70), 8):
-            pygame.draw.line(screen, price_color, (px, price_y), (px + 4, price_y), 1)
-        # Label con fondo
-        price_label = font_trade.render(f" {current_price_now:.2f} ", True, (255, 255, 255))
-        label_w = price_label.get_width()
-        label_h = price_label.get_height()
-        label_x = int(SCREEN_W * 0.70)
-        label_rect = pygame.Rect(label_x, price_y - label_h // 2, label_w, label_h)
-        pygame.draw.rect(screen, price_color, label_rect)
-        screen.blit(price_label, label_rect)
         fractal_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
         total_fractals = len(confirmed_fractals)
         for idx, frac in enumerate(confirmed_fractals):
