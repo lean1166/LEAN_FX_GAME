@@ -794,24 +794,64 @@ while running:
             screen.blit(bos_text, text_rect)
         hud_x = int(SCREEN_W * 0.86)
         hud_y = int(SCREEN_H * 0.02)
-        # --- AVATAR + NOMBRE ---
-        if avatar_img is not None:
-            screen.blit(avatar_img, (hud_x, hud_y))
-        name_txt = font_hud_title.render(STREAMER_NAME, True, (0, 191, 255))
-        screen.blit(name_txt, (hud_x + 55, hud_y + 15))
-        # --- STATS (compacto) ---
-        stat_y = hud_y + 55
-        screen.blit(font_top.render("Balance:", True, (255, 255, 255)), (hud_x, stat_y))
-        screen.blit(font_top.render("$" + str(round(fxp_balance, 2)), True, (0, 191, 255)), (hud_x + 70, stat_y))
-        screen.blit(font_top.render("Wins:", True, (255, 255, 255)), (hud_x, stat_y + 20))
-        screen.blit(font_top.render(str(wins), True, (38, 166, 154)), (hud_x + 70, stat_y + 20))
-        screen.blit(font_top.render("Losses:", True, (255, 255, 255)), (hud_x, stat_y + 40))
-        screen.blit(font_top.render(str(losses), True, (239, 83, 80)), (hud_x + 70, stat_y + 40))
-        total_trades = wins + losses
-        win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
-        wr_color = (38, 166, 154) if win_rate >= 50 else (239, 83, 80)
-        screen.blit(font_top.render("WR:", True, (255, 255, 255)), (hud_x, stat_y + 60))
-        screen.blit(font_top.render(f"{win_rate:.1f}%", True, wr_color), (hud_x + 70, stat_y + 60))
+        # --- PANEL STREAMER (imagen PNG + texto dinámico) ---
+        streamer_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_streamer.png")
+        if not hasattr(pygame, '_streamer_loaded'):
+            pygame._streamer_loaded = True
+            if os.path.exists(streamer_path):
+                pygame._streamer_img = pygame.image.load(streamer_path).convert_alpha()
+            else:
+                pygame._streamer_img = None
+                print(f"[AVISO] Panel streamer no encontrado")
+        streamer_img = pygame._streamer_img
+        if streamer_img is not None:
+            # Escalar panel (proporción 1774x887, ancho ~22% de pantalla)
+            sp_w = int(SCREEN_W * 0.22)
+            sp_h = int(sp_w * (887 / 1774))
+            sp_scaled = pygame.transform.smoothscale(streamer_img, (sp_w, sp_h))
+            sp_x = SCREEN_W - sp_w - 5
+            sp_y = 5
+            screen.blit(sp_scaled, (sp_x, sp_y))
+            # Avatar dentro del círculo (izquierda de la imagen ~15% del ancho)
+            if avatar_img is not None:
+                av_size = int(sp_h * 0.65)
+                av_scaled = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
+                av_x = sp_x + int(sp_w * 0.075)
+                av_y = sp_y + int(sp_h * 0.18)
+                screen.blit(av_scaled, (av_x, av_y))
+            # Nombre (barra superior derecha ~55% del ancho, 20% del alto)
+            name_x = sp_x + int(sp_w * 0.55)
+            name_y = sp_y + int(sp_h * 0.18)
+            n_txt = font_hud_title.render(STREAMER_NAME, True, (0, 220, 255))
+            n_rect = n_txt.get_rect(center=(name_x, name_y))
+            screen.blit(n_txt, n_rect)
+            # 4 cajitas (Balance, Win Rate, Racha, Operaciones)
+            # Posiciones relativas al panel: empiezan al ~33% del ancho, 65% del alto
+            box_y = sp_y + int(sp_h * 0.68)
+            box_start_x = sp_x + int(sp_w * 0.30)
+            box_spacing = int(sp_w * 0.165)
+            total_trades = wins + losses
+            win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+            # Calcular racha
+            streak = 0
+            for t in reversed(trade_history):
+                if t["result"] == "WIN":
+                    streak += 1
+                else:
+                    break
+            stats_values = [
+                f"${int(fxp_balance)}",
+                f"{win_rate:.0f}%",
+                f"{streak}",
+                f"{total_trades}",
+            ]
+            stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
+            font_stat_s = pygame.font.SysFont("Arial", max(10, int(sp_h * 0.16)), bold=True)
+            for i, val in enumerate(stats_values):
+                sx = box_start_x + (i * box_spacing)
+                s_txt = font_stat_s.render(val, True, stats_colors[i])
+                s_rect = s_txt.get_rect(center=(sx, box_y))
+                screen.blit(s_txt, s_rect)
         # --- TOP 5 VIEWERS (imagen PNG + texto calibrado con cursor) ---
         top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
         if not os.path.exists(top_panel_path):
