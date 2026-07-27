@@ -523,6 +523,7 @@ while running:
             zone_frozen = False
             zone_detected = None
             trade_decided = False
+            last_tick_second = -1
     # --- MOVER PRECIO (solo si NO está congelado) ---
     if not zone_frozen:
         if current_time - last_tick_time >= TICK_DELAY:
