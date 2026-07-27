@@ -132,6 +132,16 @@ flash_text = ""
 FLASH_DURATION = 2000  # 2 segundos
 # Tick-tock
 last_tick_second = -1  # Para no repetir el tick en el mismo segundo
+# Bot inteligente del streamer
+BOT_ENABLED = True
+BOT_WIN_RATE = 0.70  # 70% de probabilidad de ganar
+BOT_COOLDOWN = 300000  # 5 minutos en ms
+BOT_MAX_OPS_HOUR = 4
+bot_last_trade_time = 0
+bot_ops_this_hour = 0
+bot_hour_start = 0
+bot_bias_active = False  # True cuando el precio tiene sesgo a favor del bot
+bot_bias_direction = 0  # 1 = arriba, -1 = abajo
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -520,6 +530,58 @@ while running:
         elapsed = current_time - zone_timer_start
         if elapsed >= TIMER_DURATION:
             # Timer terminó, reanudar gráfico
+            # Si nadie eligió, el bot decide automáticamente
+            if not trade_decided and BOT_ENABLED and active_trade is None:
+                can_trade = True
+                # Verificar cooldown
+                if current_time - bot_last_trade_time < BOT_COOLDOWN and bot_last_trade_time > 0:
+                    can_trade = False
+                # Verificar máx ops/hora
+                if current_time - bot_hour_start > 3600000:
+                    bot_ops_this_hour = 0
+                    bot_hour_start = current_time
+                if bot_ops_this_hour >= BOT_MAX_OPS_HOUR:
+                    can_trade = False
+                if can_trade and zone_detected is not None:
+                    entry_price = current_candle["close"]
+                    # Bot inteligente: decide según el tipo de zona
+                    if zone_detected["type"] == "ALCISTA":
+                        bot_decision = "BUY"
+                    else:
+                        bot_decision = "SELL"
+                    if bot_decision == "BUY":
+                        sl_price = zone_detected["low"] - SL_BUFFER
+                        sl_distance = entry_price - sl_price
+                        tp_distance = sl_distance * TP_MULTIPLIER
+                        active_trade = {
+                            "type": "BUY",
+                            "entry": entry_price,
+                            "sl": sl_price,
+                            "tp": entry_price + tp_distance,
+                            "entry_index": len(candles),
+                        }
+                    else:
+                        sl_price = zone_detected["high"] + SL_BUFFER
+                        sl_distance = sl_price - entry_price
+                        tp_distance = sl_distance * TP_MULTIPLIER
+                        active_trade = {
+                            "type": "SELL",
+                            "entry": entry_price,
+                            "sl": sl_price,
+                            "tp": entry_price - tp_distance,
+                            "entry_index": len(candles),
+                        }
+                    # Activar sesgo del precio a favor del bot (70% win rate)
+                    if random.random() < BOT_WIN_RATE:
+                        bot_bias_active = True
+                        bot_bias_direction = 1 if bot_decision == "BUY" else -1
+                    else:
+                        bot_bias_active = True
+                        bot_bias_direction = -1 if bot_decision == "BUY" else 1
+                    bot_last_trade_time = current_time
+                    bot_ops_this_hour += 1
+                    trade_decided = True
+                    play_sound(sound_bos)
             zone_frozen = False
             zone_detected = None
             trade_decided = False
@@ -528,7 +590,11 @@ while running:
     if not zone_frozen:
         if current_time - last_tick_time >= TICK_DELAY:
             step_size = random.uniform(0.4, 1.8)
-            tick_move = step_size if random.random() < 0.5 else -step_size
+            # Sesgo del bot: 65% probabilidad de ir en su dirección
+            if bot_bias_active and active_trade is not None:
+                tick_move = step_size * bot_bias_direction if random.random() < 0.65 else -step_size * bot_bias_direction
+            else:
+                tick_move = step_size if random.random() < 0.5 else -step_size
             current_candle["close"] += tick_move
             current_candle["high"] = max(current_candle["high"], current_candle["close"])
             current_candle["low"] = min(current_candle["low"], current_candle["close"])
@@ -541,6 +607,7 @@ while running:
                         trade_win(TRADE_RISK * TP_MULTIPLIER)
                         trade_history.append({"type": "BUY", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
                         active_trade = None
+                        bot_bias_active = False
                         flash_active = True
                         flash_start_time = current_time
                         flash_color = (38, 166, 154)
@@ -549,6 +616,7 @@ while running:
                         trade_loss(TRADE_RISK)
                         trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
                         active_trade = None
+                        bot_bias_active = False
                         flash_active = True
                         flash_start_time = current_time
                         flash_color = (239, 83, 80)
@@ -558,6 +626,7 @@ while running:
                         trade_win(TRADE_RISK * TP_MULTIPLIER)
                         trade_history.append({"type": "SELL", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
                         active_trade = None
+                        bot_bias_active = False
                         flash_active = True
                         flash_start_time = current_time
                         flash_color = (38, 166, 154)
@@ -566,6 +635,7 @@ while running:
                         trade_loss(TRADE_RISK)
                         trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
                         active_trade = None
+                        bot_bias_active = False
                         flash_active = True
                         flash_start_time = current_time
                         flash_color = (239, 83, 80)
