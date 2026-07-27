@@ -819,7 +819,7 @@ while running:
         top5_img = pygame._top5_img2
         if top5_img is not None:
             # Escalar
-            panel_h = int(SCREEN_H * 0.68)
+            panel_h = int(SCREEN_H * 0.78)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
             panel_x = SCREEN_W - panel_w + 15
