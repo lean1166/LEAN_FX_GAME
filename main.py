@@ -843,9 +843,9 @@ while running:
                 f"{total_trades}",
             ]
             stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
-            stats_positions_x = [1609/1920, 1686/1920, 1766/1920, 1849/1920]
+            stats_positions_x = [1615/1920, 1686/1920, 1766/1920, 1849/1920]
             stats_y_pct = 142/1080
-            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.09)), bold=True)
+            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.08)), bold=True)
             for i, val in enumerate(stats_values):
                 sx = int(SCREEN_W * stats_positions_x[i])
                 sy = int(SCREEN_H * stats_y_pct)
