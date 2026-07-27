@@ -820,7 +820,7 @@ while running:
         if top5_img is not None:
             # Escalar - estirar verticalmente para más espacio en cajitas
             panel_w = int(SCREEN_W * 0.16)  # Ancho fijo
-            panel_h = int(SCREEN_H * 0.78)  # Alto estirado
+            panel_h = int(SCREEN_H * 0.85)  # Alto estirado
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
             panel_x = SCREEN_W - panel_w + 15
             panel_y = int(SCREEN_H * 0.22)
