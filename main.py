@@ -812,24 +812,21 @@ while running:
             sp_x = SCREEN_W - sp_w - 5
             sp_y = 5
             screen.blit(sp_scaled, (sp_x, sp_y))
-            # Avatar dentro del círculo (izquierda de la imagen ~15% del ancho)
+            # Avatar dentro del círculo
             if avatar_img is not None:
-                av_size = int(sp_h * 0.65)
+                av_size = int(sp_h * 0.50)
                 av_scaled = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
-                av_x = sp_x + int(sp_w * 0.075)
-                av_y = sp_y + int(sp_h * 0.18)
-                screen.blit(av_scaled, (av_x, av_y))
-            # Nombre (barra superior derecha ~55% del ancho, 20% del alto)
-            name_x = sp_x + int(sp_w * 0.55)
-            name_y = sp_y + int(sp_h * 0.18)
+                # Centro del círculo calibrado: (1550, 89) en 1920x1080
+                av_cx = sp_x + int(sp_w * ((1550 - (SCREEN_W - sp_w - 5)) / sp_w))
+                av_cy = sp_y + int(sp_h * ((89 - 5) / sp_h))
+                screen.blit(av_scaled, (av_cx - av_size // 2, av_cy - av_size // 2))
+            # Nombre (barra superior) calibrado: (1737, 65) en 1920x1080
+            name_x = int(SCREEN_W * (1737 / 1920))
+            name_y = int(SCREEN_H * (65 / 1080))
             n_txt = font_hud_title.render(STREAMER_NAME, True, (0, 220, 255))
             n_rect = n_txt.get_rect(center=(name_x, name_y))
             screen.blit(n_txt, n_rect)
-            # 4 cajitas (Balance, Win Rate, Racha, Operaciones)
-            # Posiciones relativas al panel: empiezan al ~33% del ancho, 65% del alto
-            box_y = sp_y + int(sp_h * 0.68)
-            box_start_x = sp_x + int(sp_w * 0.30)
-            box_spacing = int(sp_w * 0.165)
+            # 4 cajitas calibradas con cursor en 1920x1080
             total_trades = wins + losses
             win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
             # Calcular racha
@@ -846,11 +843,14 @@ while running:
                 f"{total_trades}",
             ]
             stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
-            font_stat_s = pygame.font.SysFont("Arial", max(10, int(sp_h * 0.16)), bold=True)
+            stats_positions_x = [1645/1920, 1711/1920, 1778/1920, 1853/1920]
+            stats_y_pct = 120/1080
+            font_stat_s = pygame.font.SysFont("Arial", max(10, int(sp_h * 0.18)), bold=True)
             for i, val in enumerate(stats_values):
-                sx = box_start_x + (i * box_spacing)
+                sx = int(SCREEN_W * stats_positions_x[i])
+                sy = int(SCREEN_H * stats_y_pct)
                 s_txt = font_stat_s.render(val, True, stats_colors[i])
-                s_rect = s_txt.get_rect(center=(sx, box_y))
+                s_rect = s_txt.get_rect(center=(sx, sy))
                 screen.blit(s_txt, s_rect)
         # --- TOP 5 VIEWERS (imagen PNG + texto calibrado con cursor) ---
         top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
