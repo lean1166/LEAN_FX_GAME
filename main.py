@@ -814,15 +814,15 @@ while running:
             screen.blit(sp_scaled, (sp_x, sp_y))
             # Avatar dentro del círculo
             if avatar_img is not None:
-                av_size = int(sp_h * 0.35)
+                av_size = int(sp_h * 0.45)
                 av_scaled = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
-                # Centro del círculo calibrado: (1550, 89) en 1920x1080
-                av_cx = sp_x + int(sp_w * ((1550 - (SCREEN_W - sp_w - 5)) / sp_w))
-                av_cy = sp_y + int(sp_h * ((89 - 5) / sp_h))
+                # Centro del círculo calibrado: (1502, 107) en 1920x1080
+                av_cx = int(SCREEN_W * (1502/1920))
+                av_cy = int(SCREEN_H * (107/1080))
                 screen.blit(av_scaled, (av_cx - av_size // 2, av_cy - av_size // 2))
-            # Nombre (barra superior) calibrado: (1737, 65) en 1920x1080
-            name_x = int(SCREEN_W * (1737 / 1920))
-            name_y = int(SCREEN_H * (65 / 1080))
+            # Nombre (barra superior) calibrado: (1719, 72) en 1920x1080
+            name_x = int(SCREEN_W * (1719/1920))
+            name_y = int(SCREEN_H * (72/1080))
             n_txt = font_hud_title.render(STREAMER_NAME, True, (0, 220, 255))
             n_rect = n_txt.get_rect(center=(name_x, name_y))
             screen.blit(n_txt, n_rect)
@@ -843,9 +843,9 @@ while running:
                 f"{total_trades}",
             ]
             stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
-            stats_positions_x = [1645/1920, 1711/1920, 1778/1920, 1853/1920]
-            stats_y_pct = 120/1080
-            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.12)), bold=True)
+            stats_positions_x = [1604/1920, 1681/1920, 1761/1920, 1844/1920]
+            stats_y_pct = 139/1080
+            font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.14)), bold=True)
             for i, val in enumerate(stats_values):
                 sx = int(SCREEN_W * stats_positions_x[i])
                 sy = int(SCREEN_H * stats_y_pct)
