@@ -677,9 +677,9 @@ while running:
         price_range = max_p - min_p
         if price_range == 0:
             price_range = 1.0
-        vertical_zoom = (SCREEN_H * 0.88) / price_range
+        vertical_zoom = (SCREEN_H * 0.75) / price_range
         view_center_price = min_p + price_range / 2
-        center_y = SCREEN_H // 2
+        center_y = int(SCREEN_H * 0.55)
         chart_start_x = 0
         chart_end_x = int(SCREEN_W * 0.75)
         # Velas ocupan hasta 70%
