@@ -885,11 +885,31 @@ while running:
             remaining = max(0, TIMER_DURATION - elapsed)
             seconds_left = remaining / 1000.0
             timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
-            timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.10)))
+            timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.08)))
             screen.blit(timer_txt, timer_rect)
+            # Barra de progreso del timer
+            bar_w = int(SCREEN_W * 0.25)
+            bar_h = 12
+            bar_x = int(SCREEN_W * 0.35) - bar_w // 2
+            bar_y = int(SCREEN_H * 0.13)
+            progress = remaining / TIMER_DURATION
+            # Fondo de la barra (gris oscuro)
+            pygame.draw.rect(screen, (40, 40, 40), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
+            # Barra que se vacía (cambia de color: cyan → amarillo → rojo)
+            if progress > 0.5:
+                bar_color = (0, 220, 255)
+            elif progress > 0.25:
+                bar_color = (255, 220, 0)
+            else:
+                bar_color = (255, 50, 50)
+            fill_w = int(bar_w * progress)
+            if fill_w > 0:
+                pygame.draw.rect(screen, bar_color, (bar_x, bar_y, fill_w, bar_h), border_radius=6)
+            # Borde de la barra
+            pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_w, bar_h), 1, border_radius=6)
             # Texto "ZONA DETECTADA"
             zone_label = font_btn.render("ZONA DETECTADA - DECIDE!", True, (255, 255, 0))
-            zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.16)))
+            zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.17)))
             screen.blit(zone_label, zone_rect)
         elif active_trade is not None:
             # Iluminar el botón que se eligió
