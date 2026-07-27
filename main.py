@@ -470,6 +470,7 @@ while running:
                 running = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
+            print(f"[CLICK] x={mx}, y={my}")
             # Solo se puede clickear BUY/SELL durante el timer y si no hay trade activo
             if zone_frozen and not trade_decided and active_trade is None:
                 hud_x_click = int(SCREEN_W * 0.86)
