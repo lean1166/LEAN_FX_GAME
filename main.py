@@ -818,7 +818,7 @@ while running:
         top5_img = pygame._top5_img
         if top5_img is not None:
             # Escalar vertical para el panel derecho
-            panel_h = int(SCREEN_H * 0.75)
+            panel_h = int(SCREEN_H * 0.68)
             panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
             top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
             # Posición: pegado al borde derecho
