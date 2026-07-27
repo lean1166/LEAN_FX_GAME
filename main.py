@@ -903,8 +903,8 @@ while running:
                 {"name": (1690/1920, 751/1080), "w": (1552/1920, 822/1080), "l": (1692/1920, 821/1080), "wr": (1832/1920, 819/1080)},
                 {"name": (1690/1920, 885/1080), "w": (1556/1920, 947/1080), "l": (1691/1920, 949/1080), "wr": (1829/1920, 949/1080)},
             ]
-            font_name_top5 = pygame.font.SysFont("Arial", max(12, int(SCREEN_H * 0.018)), bold=True)
-            font_stat_top5 = pygame.font.SysFont("Arial", max(10, int(SCREEN_H * 0.016)), bold=True)
+            font_name_top5 = pygame.font.SysFont("Arial", max(14, int(SCREEN_H * 0.022)), bold=True)
+            font_stat_top5 = pygame.font.SysFont("Arial", max(12, int(SCREEN_H * 0.020)), bold=True)
             for i, viewer in enumerate(top_viewers):
                 pos = card_positions[i]
                 # Nombre
