@@ -892,18 +892,28 @@ while running:
             zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.16)))
             screen.blit(zone_label, zone_rect)
         elif active_trade is not None:
-            # Mostrar info del trade activo
-            pygame.draw.rect(screen, (80, 80, 80), buy_rect, border_radius=6)
-            pygame.draw.rect(screen, (80, 80, 80), sell_rect, border_radius=6)
+            # Iluminar el botón que se eligió
+            if active_trade["type"] == "BUY":
+                pygame.draw.rect(screen, (20, 200, 120), buy_rect, border_radius=6)  # Verde brillante
+                pygame.draw.rect(screen, (50, 50, 50), sell_rect, border_radius=6)
+                buy_txt = font_btn.render("BUY", True, (255, 255, 255))
+                sell_txt = font_btn.render("SELL", True, (100, 100, 100))
+            else:
+                pygame.draw.rect(screen, (50, 50, 50), buy_rect, border_radius=6)
+                pygame.draw.rect(screen, (220, 50, 50), sell_rect, border_radius=6)  # Rojo brillante
+                buy_txt = font_btn.render("BUY", True, (100, 100, 100))
+                sell_txt = font_btn.render("SELL", True, (255, 255, 255))
+            screen.blit(buy_txt, buy_txt.get_rect(center=buy_rect.center))
+            screen.blit(sell_txt, sell_txt.get_rect(center=sell_rect.center))
+            # Info del trade debajo de los botones
             trade_txt = font_btn.render(f"{active_trade['type']} ACTIVO", True, (255, 255, 0))
-            screen.blit(trade_txt, trade_txt.get_rect(center=(hud_x + 130, hud_y + 212)))
-            # Mostrar Entry, TP, SL
+            screen.blit(trade_txt, trade_txt.get_rect(center=(btn_x + 130, btn_y + 60)))
             entry_txt = font_trade.render(f"Entry: {active_trade['entry']:.2f}", True, (255, 255, 255))
             tp_txt = font_trade.render(f"TP: {active_trade['tp']:.2f}", True, (38, 166, 154))
             sl_txt = font_trade.render(f"SL: {active_trade['sl']:.2f}", True, (239, 83, 80))
-            screen.blit(entry_txt, (hud_x, hud_y + 250))
-            screen.blit(tp_txt, (hud_x, hud_y + 270))
-            screen.blit(sl_txt, (hud_x, hud_y + 290))
+            screen.blit(entry_txt, (btn_x, btn_y + 80))
+            screen.blit(tp_txt, (btn_x, btn_y + 98))
+            screen.blit(sl_txt, (btn_x, btn_y + 116))
             # PnL flotante
             current_price = current_candle["close"]
             if active_trade["type"] == "BUY":
@@ -912,7 +922,7 @@ while running:
                 pnl_points = active_trade["entry"] - current_price
             pnl_color = (38, 166, 154) if pnl_points >= 0 else (239, 83, 80)
             pnl_txt = font_hud_val.render(f"PnL: {pnl_points:+.1f} pts", True, pnl_color)
-            screen.blit(pnl_txt, (hud_x, hud_y + 315))
+            screen.blit(pnl_txt, (btn_x, btn_y + 138))
         # --- DIBUJAR TP/SL EN EL GRAFICO ---
         if active_trade is not None:
             tp_y = center_y - int((active_trade["tp"] - view_center_price) * vertical_zoom)
