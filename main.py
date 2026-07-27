@@ -480,8 +480,8 @@ while running:
             print(f"[CLICK] x={mx}, y={my}")
             # Solo se puede clickear BUY/SELL durante el timer y si no hay trade activo
             if zone_frozen and not trade_decided and active_trade is None:
-                btn_x = int(SCREEN_W * 0.30)
-                btn_y = int(SCREEN_H * 0.22)
+                btn_x = int(SCREEN_W * 0.35)
+                btn_y = int(SCREEN_H * 0.05)
                 buy_rect = pygame.Rect(btn_x, btn_y, 120, 45)
                 sell_rect = pygame.Rect(btn_x + 140, btn_y, 120, 45)
                 if buy_rect.collidepoint(mx, my):
@@ -929,9 +929,9 @@ while running:
                 wr_txt = font_stat_top5.render(f"{wr_val}%", True, (0, 220, 255))
                 wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * pos["wr"][0]), int(SCREEN_H * pos["wr"][1])))
                 screen.blit(wr_txt, wr_rect)
-        # Botones BUY / SELL (solo durante el timer, en el centro-izquierda)
-        btn_x = int(SCREEN_W * 0.30)
-        btn_y = int(SCREEN_H * 0.22)
+        # Botones BUY / SELL (solo durante el timer, centrados arriba)
+        btn_x = int(SCREEN_W * 0.35)
+        btn_y = int(SCREEN_H * 0.05)
         buy_rect = pygame.Rect(btn_x, btn_y, 120, 45)
         sell_rect = pygame.Rect(btn_x + 140, btn_y, 120, 45)
         if zone_frozen and not trade_decided and active_trade is None:
