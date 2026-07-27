@@ -825,47 +825,40 @@ while running:
             panel_x = SCREEN_W - panel_w + 30
             panel_y = int(SCREEN_H * 0.20)
             screen.blit(top5_scaled, (panel_x, panel_y))
-            # Posiciones calibradas en 1920x1080:
-            # Nombre1: (1703, 378), W1: (1584, 451), L1: (1695, 453), WIN%1: (1805, 449)
-            # Nombre2: (1698, 513), W2: (1584, 574)
-            # Convertir a proporciones relativas a la pantalla
-            # name_x = 1703/1920 = 0.887, name1_y = 378/1080 = 0.350
-            # w_x = 1584/1920 = 0.825, l_x = 1695/1920 = 0.883, wr_x = 1805/1920 = 0.940
-            # stats_y offset from name = (451-378)/1080 = 0.0676
-            # card_spacing = (513-378)/1080 = 0.125
-            name_x_pct = 0.887
-            name1_y_pct = 0.350
-            w_x_pct = 0.825
-            l_x_pct = 0.883
-            wr_x_pct = 0.940
-            stats_y_offset_pct = 0.068
-            card_spacing_pct = 0.125
+            # Posiciones calibradas con 20 clicks en 1920x1080
+            # Convertidas a porcentajes para que funcione en cualquier resolución
+            card_positions = [
+                {"name": (1702/1920, 338/1080), "w": (1572/1920, 414/1080), "l": (1690/1920, 413/1080), "wr": (1807/1920, 414/1080)},
+                {"name": (1714/1920, 479/1080), "w": (1572/1920, 550/1080), "l": (1691/1920, 548/1080), "wr": (1807/1920, 546/1080)},
+                {"name": (1708/1920, 613/1080), "w": (1572/1920, 679/1080), "l": (1692/1920, 679/1080), "wr": (1806/1920, 678/1080)},
+                {"name": (1716/1920, 746/1080), "w": (1577/1920, 818/1080), "l": (1690/1920, 817/1080), "wr": (1808/1920, 817/1080)},
+                {"name": (1718/1920, 880/1080), "w": (1575/1920, 947/1080), "l": (1691/1920, 948/1080), "wr": (1808/1920, 947/1080)},
+            ]
             font_name_top5 = pygame.font.SysFont("Arial", max(12, int(SCREEN_H * 0.018)), bold=True)
             font_stat_top5 = pygame.font.SysFont("Arial", max(10, int(SCREEN_H * 0.016)), bold=True)
             for i, viewer in enumerate(top_viewers):
+                pos = card_positions[i]
                 # Nombre
-                nx = int(SCREEN_W * name_x_pct)
-                ny = int(SCREEN_H * (name1_y_pct + i * card_spacing_pct))
+                nx = int(SCREEN_W * pos["name"][0])
+                ny = int(SCREEN_H * pos["name"][1])
                 n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
                 n_rect = n_txt.get_rect(center=(nx, ny))
                 screen.blit(n_txt, n_rect)
-                # Stats Y
-                sy = int(SCREEN_H * (name1_y_pct + i * card_spacing_pct + stats_y_offset_pct))
                 # W
                 w_val = viewer.get('wins', 0)
                 w_txt = font_stat_top5.render(str(w_val), True, (38, 166, 154))
-                w_rect = w_txt.get_rect(center=(int(SCREEN_W * w_x_pct), sy))
+                w_rect = w_txt.get_rect(center=(int(SCREEN_W * pos["w"][0]), int(SCREEN_H * pos["w"][1])))
                 screen.blit(w_txt, w_rect)
                 # L
                 l_val = viewer.get('losses', 0)
                 l_txt = font_stat_top5.render(str(l_val), True, (239, 83, 80))
-                l_rect = l_txt.get_rect(center=(int(SCREEN_W * l_x_pct), sy))
+                l_rect = l_txt.get_rect(center=(int(SCREEN_W * pos["l"][0]), int(SCREEN_H * pos["l"][1])))
                 screen.blit(l_txt, l_rect)
                 # WIN%
                 total = w_val + l_val
                 wr_val = int((w_val / total * 100)) if total > 0 else 0
                 wr_txt = font_stat_top5.render(f"{wr_val}%", True, (0, 220, 255))
-                wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * wr_x_pct), sy))
+                wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * pos["wr"][0]), int(SCREEN_H * pos["wr"][1])))
                 screen.blit(wr_txt, wr_rect)
         # Botones BUY / SELL (solo durante el timer)
         buy_rect = pygame.Rect(hud_x, hud_y + 190, 120, 45)
