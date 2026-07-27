@@ -484,9 +484,28 @@ font_menu_btn = pygame.font.SysFont("Arial", 28, bold=True)
 in_menu = True
 menu_selection = None
 
+# Cargar imagen de fondo del menú
+menu_bg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "menu_bg.png")
+menu_bg = None
+if os.path.exists(menu_bg_path):
+    menu_bg = pygame.image.load(menu_bg_path).convert()
+    menu_bg = pygame.transform.smoothscale(menu_bg, (SCREEN_W, SCREEN_H))
+else:
+    print("[AVISO] menu_bg.png no encontrado")
+
+# Efecto click
+menu_click_btn = None  # Nombre del botón clickeado
+menu_click_time = 0
+MENU_CLICK_DURATION = 150  # ms
+
 while in_menu and running:
     clock.tick(60)
-    screen.fill((15, 15, 25))
+    current_time = pygame.time.get_ticks()
+    # Fondo
+    if menu_bg is not None:
+        screen.blit(menu_bg, (0, 0))
+    else:
+        screen.fill((15, 15, 25))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -498,48 +517,37 @@ while in_menu and running:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
             if btn_iniciar.collidepoint(mx, my):
-                in_menu = False
+                menu_click_btn = "iniciar"
+                menu_click_time = current_time
             elif btn_ranking.collidepoint(mx, my):
-                menu_selection = "ranking"
+                menu_click_btn = "ranking"
+                menu_click_time = current_time
             elif btn_config.collidepoint(mx, my):
-                menu_selection = "config"
-    # Logo LEAN FX arriba
-    if avatar_img is not None:
-        logo_size = 120
-        logo_scaled = pygame.transform.smoothscale(avatar_img, (logo_size, logo_size))
-        screen.blit(logo_scaled, (SCREEN_W // 2 - logo_size // 2, int(SCREEN_H * 0.08)))
-    # Título
-    title_surf = font_menu_title.render("LEAN FX GAME", True, (0, 220, 255))
-    title_rect = title_surf.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.28)))
-    screen.blit(title_surf, title_rect)
-    # Subtítulo
-    sub_surf = font_top.render("Simulador de Trading Interactivo", True, (150, 150, 150))
-    sub_rect = sub_surf.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.34)))
-    screen.blit(sub_surf, sub_rect)
-    # Botones
-    btn_w, btn_h = 280, 55
+                menu_click_btn = "config"
+                menu_click_time = current_time
+    # Verificar si el efecto click terminó
+    if menu_click_btn and current_time - menu_click_time > MENU_CLICK_DURATION:
+        if menu_click_btn == "iniciar":
+            in_menu = False
+        elif menu_click_btn == "ranking":
+            menu_selection = "ranking"
+        elif menu_click_btn == "config":
+            menu_selection = "config"
+        menu_click_btn = None
+    # Áreas de botones (posiciones relativas a la imagen 1920x1080)
+    btn_w, btn_h = int(SCREEN_W * 0.28), int(SCREEN_H * 0.065)
     btn_x = SCREEN_W // 2 - btn_w // 2
-    # INICIAR
-    btn_iniciar = pygame.Rect(btn_x, int(SCREEN_H * 0.45), btn_w, btn_h)
-    pygame.draw.rect(screen, (0, 180, 220), btn_iniciar, border_radius=8)
-    pygame.draw.rect(screen, (0, 220, 255), btn_iniciar, 2, border_radius=8)
-    ini_txt = font_menu_btn.render("INICIAR", True, (255, 255, 255))
-    screen.blit(ini_txt, ini_txt.get_rect(center=btn_iniciar.center))
-    # RANKING
-    btn_ranking = pygame.Rect(btn_x, int(SCREEN_H * 0.58), btn_w, btn_h)
-    pygame.draw.rect(screen, (30, 30, 50), btn_ranking, border_radius=8)
-    pygame.draw.rect(screen, (0, 180, 220), btn_ranking, 2, border_radius=8)
-    rank_txt = font_menu_btn.render("RANKING", True, (0, 220, 255))
-    screen.blit(rank_txt, rank_txt.get_rect(center=btn_ranking.center))
-    # CONFIGURACIÓN
-    btn_config = pygame.Rect(btn_x, int(SCREEN_H * 0.71), btn_w, btn_h)
-    pygame.draw.rect(screen, (30, 30, 50), btn_config, border_radius=8)
-    pygame.draw.rect(screen, (0, 180, 220), btn_config, 2, border_radius=8)
-    cfg_txt = font_menu_btn.render("CONFIGURACIÓN", True, (0, 220, 255))
-    screen.blit(cfg_txt, cfg_txt.get_rect(center=btn_config.center))
-    # Info abajo
-    ver_txt = font_top.render("v1.0 | @lean_fx", True, (80, 80, 80))
-    screen.blit(ver_txt, ver_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.92))))
+    btn_iniciar = pygame.Rect(btn_x, int(SCREEN_H * 0.47), btn_w, btn_h)
+    btn_ranking = pygame.Rect(btn_x, int(SCREEN_H * 0.60), btn_w, btn_h)
+    btn_config = pygame.Rect(btn_x, int(SCREEN_H * 0.73), btn_w, btn_h)
+    # Dibujar efecto click (oscurecer + bajar)
+    buttons = [("iniciar", btn_iniciar), ("ranking", btn_ranking), ("config", btn_config)]
+    for btn_name, btn_rect in buttons:
+        if menu_click_btn == btn_name:
+            # Efecto: oscurecer + bajar 3px
+            dark_surface = pygame.Surface((btn_rect.width, btn_rect.height), pygame.SRCALPHA)
+            dark_surface.fill((0, 0, 0, 80))
+            screen.blit(dark_surface, (btn_rect.x, btn_rect.y + 3))
     pygame.display.flip()
 
 # === GAME LOOP ===
