@@ -826,21 +826,21 @@ while running:
             panel_y = int(SCREEN_H * 0.22)
             screen.blit(top5_scaled, (panel_x, panel_y))
             # Texto dinámico sobre cada tarjeta
-            # Título TOP 5 ocupa ~8% arriba
-            # Cada tarjeta ocupa ~18.4% del panel (nombre arriba, W/L/Win% abajo)
-            title_offset = panel_h * 0.08
-            card_h = panel_h * 0.184
+            # Título TOP 5 ocupa ~10% arriba
+            # Cada tarjeta ocupa ~18% del panel (nombre arriba, W/L/Win% abajo)
+            title_offset = panel_h * 0.10
+            card_h = panel_h * 0.18
             card_gap = panel_h * 0.0
             for i, viewer in enumerate(top_viewers):
                 # Y de inicio de cada tarjeta
                 card_y = panel_y + title_offset + (i * (card_h + card_gap))
-                # Nombre (al lado del número de ranking)
+                # Nombre (dentro de la barra superior, al lado del ranking)
                 name_x = panel_x + int(panel_w * 0.30)
-                name_y = int(card_y + card_h * 0.28)
-                name_txt = font_hud_title.render(viewer['name'], True, (255, 255, 255))
+                name_y = int(card_y + card_h * 0.35)
+                name_txt = font_top.render(viewer['name'], True, (255, 255, 255))
                 screen.blit(name_txt, (name_x, name_y))
-                # W, L, Win% (dentro de las cajitas, ~82% del alto de la tarjeta)
-                stats_y = int(card_y + card_h * 0.82)
+                # W, L, Win% (dentro de las cajitas inferiores, ~78%)
+                stats_y = int(card_y + card_h * 0.78)
                 # W
                 w_x = panel_x + int(panel_w * 0.18)
                 w_val = viewer.get('wins', 0)
