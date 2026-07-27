@@ -956,7 +956,7 @@ while running:
                 play_sound(sound_tick)
                 last_tick_second = current_second
             timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
-            timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.04)))
+            timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.08)))
             screen.blit(timer_txt, timer_rect)
             # Barra de progreso del timer
             bar_w = int(SCREEN_W * 0.25)
@@ -978,14 +978,10 @@ while running:
                 pygame.draw.rect(screen, bar_color, (bar_x, bar_y, fill_w, bar_h), border_radius=6)
             # Borde de la barra
             pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_w, bar_h), 1, border_radius=6)
-            # Texto "ZONA DETECTADA"
+            # Texto "ZONA DETECTADA" arriba de todo
             zone_label = font_btn.render("ZONA DETECTADA - DECIDE!", True, (255, 255, 0))
-            zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.17)))
+            zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.03)))
             screen.blit(zone_label, zone_rect)
-            # Texto para viewers
-            chat_label = font_top.render("ESCRIBE BUY O SELL EN EL CHAT", True, (200, 200, 200))
-            chat_rect = chat_label.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.20)))
-            screen.blit(chat_label, chat_rect)
         elif active_trade is not None:
             # Iluminar el botón que se eligió
             if active_trade["type"] == "BUY":
