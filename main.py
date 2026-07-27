@@ -130,6 +130,8 @@ flash_start_time = 0
 flash_color = (0, 0, 0)
 flash_text = ""
 FLASH_DURATION = 2000  # 2 segundos
+# Tick-tock
+last_tick_second = -1  # Para no repetir el tick en el mismo segundo
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -947,6 +949,11 @@ while running:
             elapsed = current_time - zone_timer_start
             remaining = max(0, TIMER_DURATION - elapsed)
             seconds_left = remaining / 1000.0
+            # Tick-tock en los últimos 5 segundos
+            current_second = int(seconds_left)
+            if seconds_left <= 5.0 and current_second != last_tick_second and seconds_left > 0:
+                play_sound(sound_tick)
+                last_tick_second = current_second
             timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
             timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.42), int(SCREEN_H * 0.04)))
             screen.blit(timer_txt, timer_rect)
