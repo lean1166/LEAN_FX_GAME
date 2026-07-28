@@ -33,6 +33,7 @@ sound_win = load_sound("WIN.mp3")
 sound_loss = load_sound("LOSS.mp3")
 sound_zoom = load_sound("ZOOM.mp3")
 sound_tick = load_sound("TICK.mp3")
+sound_ambient = load_sound("AMBIENT.mp3")
 
 def play_sound(sound):
     if sound is not None and game_started:
@@ -553,6 +554,9 @@ while app_running:
     btn_config = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (607/768)) - btn_h // 2, btn_w, btn_h)
 
     # --- MENÚ ---
+    # Reproducir música ambient en loop
+    if sound_ambient is not None:
+        sound_ambient.play(loops=-1)
     while in_menu and app_running:
         clock.tick(60)
         current_time = pygame.time.get_ticks()
