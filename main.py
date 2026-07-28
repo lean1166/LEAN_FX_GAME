@@ -233,6 +233,7 @@ VIEWER_BOT_INTERVAL = 8000  # (ya no se usa, operan en zona)
 viewer_bot_last_time = 0
 # --- SISTEMA DE VOTOS DE VIEWERS ---
 viewer_votes = []  # Lista de {"name": str, "vote": "BUY"/"SELL"} votos pendientes
+viewer_votes_display = []  # Copia para mostrar incluso después de resolver
 viewer_trade_active = None  # Trade activo de viewers: {"type", "entry", "sl", "tp", "entry_index"}
 viewer_trade_is_extremo = False  # Si la zona actual es EXTREMO (streamer también opera)
 running = True
@@ -1248,6 +1249,7 @@ while app_running:
                             trade_history.append({"type": "BUY", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
                             active_trade = None
                             bot_bias_active = False
+                            viewer_votes_display = []
                             flash_active = True
                             flash_start_time = current_time
                             flash_color = (38, 166, 154)
@@ -1257,6 +1259,7 @@ while app_running:
                             trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
                             active_trade = None
                             bot_bias_active = False
+                            viewer_votes_display = []
                             flash_active = True
                             flash_start_time = current_time
                             flash_color = (239, 83, 80)
@@ -1267,6 +1270,7 @@ while app_running:
                             trade_history.append({"type": "SELL", "result": "WIN", "pnl": TRADE_RISK * TP_MULTIPLIER})
                             active_trade = None
                             bot_bias_active = False
+                            viewer_votes_display = []
                             flash_active = True
                             flash_start_time = current_time
                             flash_color = (38, 166, 154)
@@ -1276,6 +1280,7 @@ while app_running:
                             trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
                             active_trade = None
                             bot_bias_active = False
+                            viewer_votes_display = []
                             flash_active = True
                             flash_start_time = current_time
                             flash_color = (239, 83, 80)
@@ -1318,6 +1323,7 @@ while app_running:
                 for chosen in voters:
                     vote = random.choice(["BUY", "SELL"])
                     viewer_votes.append({"name": chosen, "vote": vote})
+                viewer_votes_display = viewer_votes.copy()
                 # Crear trade de viewers si no hay uno activo
                 if zone_detected is not None and viewer_trade_active is None:
                     entry_price = current_candle["close"]
@@ -1372,6 +1378,8 @@ while app_running:
                             break
                 viewer_trade_active = None
                 viewer_votes = []
+                if active_trade is None:
+                    viewer_votes_display = []
         if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
             candles.append(current_candle.copy())
             if len(candles) > 1000:
@@ -1825,9 +1833,9 @@ while app_running:
                 pnl_txt = font_timer.render(f"{pnl_pct:+.1f}%", True, pnl_color)
                 screen.blit(pnl_txt, (info_x, info_y + 25))
                 # Viewers también operan al mismo tiempo - mostrar su panel
-                if viewer_votes:
-                    buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
-                    sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
+                if viewer_votes_display:
+                    buy_count = sum(1 for v in viewer_votes_display if v["vote"] == "BUY")
+                    sell_count = sum(1 for v in viewer_votes_display if v["vote"] == "SELL")
                     vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
                     vbox_x = int(SCREEN_W * 0.05)
                     vbox_y = int(SCREEN_H * 0.12)
