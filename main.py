@@ -675,6 +675,8 @@ while app_running:
             if menu_click_btn == "iniciar":
                 in_menu = False
                 game_started = True
+                if sound_ambient is not None:
+                    sound_ambient.stop()
             elif menu_click_btn == "ranking":
                 menu_selection = "ranking"
             elif menu_click_btn == "config":
