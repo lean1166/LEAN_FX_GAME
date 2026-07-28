@@ -1695,38 +1695,26 @@ while app_running:
                         if h_elapsed > TOP5_HIGHLIGHT_DURATION:
                             del top5_highlights[viewer_name]
                             highlight_info = None
-                    # Dibujar borde brillante si hay highlight activo
+                    # Dibujar efecto si hay highlight activo
                     if highlight_info:
                         h_elapsed = current_time - highlight_info["start_time"]
                         h_alpha = max(0, 1.0 - (h_elapsed / TOP5_HIGHLIGHT_DURATION))
-                        # Calcular posición de la cajita para este viewer
+                        # Posición Y del nombre (centro de la tarjeta)
                         card_cy = int(SCREEN_H * pos["name"][1])
-                        card_h = int(SCREEN_H * 0.09)
-                        card_x = panel_x + int(panel_w * 0.02)
-                        card_w = int(panel_w * 0.96)
-                        card_top = card_cy - card_h // 2
                         if highlight_info["type"] == "up":
-                            # Borde verde brillante pulsante
-                            glow_intensity = int(200 * h_alpha * (0.5 + 0.5 * math.sin(current_time / 150.0)))
-                            border_color = (0, min(255, glow_intensity + 50), 0)
-                            pygame.draw.rect(screen, border_color, (card_x, card_top, card_w, card_h), 2, border_radius=4)
-                            # Flechita ↑ verde
-                            arrow_x = int(SCREEN_W * pos["name"][0]) + 60
-                            arrow_y = int(SCREEN_H * pos["name"][1])
-                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-                            arrow_txt = arrow_font.render("^", True, (0, int(255 * h_alpha), 0))
-                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, arrow_y)))
+                            # Flechita ↑ verde al lado del nombre
+                            arrow_x = int(SCREEN_W * pos["name"][0]) + 55
+                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                            arrow_color = (0, int(255 * h_alpha), 0)
+                            arrow_txt = arrow_font.render("+", True, arrow_color)
+                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, card_cy)))
                         elif highlight_info["type"] == "down":
-                            # Borde rojo sutil
-                            glow_intensity = int(150 * h_alpha)
-                            border_color = (min(255, glow_intensity + 80), 0, 0)
-                            pygame.draw.rect(screen, border_color, (card_x, card_top, card_w, card_h), 2, border_radius=4)
-                            # Flechita ↓ roja
-                            arrow_x = int(SCREEN_W * pos["name"][0]) + 60
-                            arrow_y = int(SCREEN_H * pos["name"][1])
-                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-                            arrow_txt = arrow_font.render("v", True, (int(255 * h_alpha), 0, 0))
-                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, arrow_y)))
+                            # Flechita ↓ roja al lado del nombre
+                            arrow_x = int(SCREEN_W * pos["name"][0]) + 55
+                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                            arrow_color = (int(255 * h_alpha), 0, 0)
+                            arrow_txt = arrow_font.render("-", True, arrow_color)
+                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, card_cy)))
                     # Nombre
                     nx = int(SCREEN_W * pos["name"][0])
                     ny = int(SCREEN_H * pos["name"][1])
