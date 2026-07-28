@@ -1396,22 +1396,6 @@ while app_running:
                 pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
                 # Linea SL (roja solida)
                 pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
-                # Labels con fondo siempre 5 velas adelante
-                # Entry label
-                entry_label = font_trade.render(f" {active_trade['entry']:.2f} ", True, (255, 255, 255))
-                entry_bg = pygame.Rect(line_end_x + 3, entry_y - 9, entry_label.get_width(), entry_label.get_height())
-                pygame.draw.rect(screen, (100, 100, 100), entry_bg)
-                screen.blit(entry_label, entry_bg)
-                # TP label
-                tp_label = font_trade.render(f" {active_trade['tp']:.2f} ", True, (255, 255, 255))
-                tp_bg = pygame.Rect(line_end_x + 3, tp_y - 9, tp_label.get_width(), tp_label.get_height())
-                pygame.draw.rect(screen, (38, 166, 154), tp_bg)
-                screen.blit(tp_label, tp_bg)
-                # SL label
-                sl_label = font_trade.render(f" {active_trade['sl']:.2f} ", True, (255, 255, 255))
-                sl_bg = pygame.Rect(line_end_x + 3, sl_y - 9, sl_label.get_width(), sl_label.get_height())
-                pygame.draw.rect(screen, (239, 83, 80), sl_bg)
-                screen.blit(sl_label, sl_bg)
         # --- FLASH AL GANAR/PERDER ---
         if flash_active:
             flash_elapsed = current_time - flash_start_time
