@@ -522,13 +522,42 @@ while app_running:
         else:
             screen.fill((15, 15, 25))
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                app_running = False
-                in_menu = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    app_running = False
-                    in_menu = False
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                # Diálogo ¿Cerrar juego?
+                confirming = True
+                pygame.event.clear()
+                pygame.time.wait(100)
+                while confirming:
+                    confirm_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+                    confirm_overlay.fill((0, 0, 0, 150))
+                    screen.blit(confirm_overlay, (0, 0))
+                    confirm_txt = font_timer.render("¿CERRAR EL JUEGO?", True, (255, 255, 255))
+                    screen.blit(confirm_txt, confirm_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.35))))
+                    btn_si = pygame.Rect(SCREEN_W // 2 - 150, int(SCREEN_H * 0.50), 120, 50)
+                    btn_no = pygame.Rect(SCREEN_W // 2 + 30, int(SCREEN_H * 0.50), 120, 50)
+                    pygame.draw.rect(screen, (239, 83, 80), btn_si, border_radius=8)
+                    pygame.draw.rect(screen, (38, 166, 154), btn_no, border_radius=8)
+                    si_txt = font_btn.render("SI", True, (255, 255, 255))
+                    no_txt = font_btn.render("NO", True, (255, 255, 255))
+                    screen.blit(si_txt, si_txt.get_rect(center=btn_si.center))
+                    screen.blit(no_txt, no_txt.get_rect(center=btn_no.center))
+                    pygame.display.flip()
+                    for c_event in pygame.event.get():
+                        if c_event.type == pygame.QUIT:
+                            confirming = False
+                            app_running = False
+                            in_menu = False
+                        elif c_event.type == pygame.KEYDOWN:
+                            if c_event.key == pygame.K_ESCAPE:
+                                confirming = False
+                        elif c_event.type == pygame.MOUSEBUTTONDOWN and c_event.button == 1:
+                            cmx, cmy = c_event.pos
+                            if btn_si.collidepoint(cmx, cmy):
+                                confirming = False
+                                app_running = False
+                                in_menu = False
+                            elif btn_no.collidepoint(cmx, cmy):
+                                confirming = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 print(f"[MENU CLICK] x={mx}, y={my}")
