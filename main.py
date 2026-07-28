@@ -566,7 +566,48 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                running = False
+                # Diálogo de pausa: ¿Volver al menú o cerrar?
+                paused = True
+                while paused:
+                    # Fondo oscuro semi-transparente
+                    pause_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+                    pause_overlay.fill((0, 0, 0, 150))
+                    screen.blit(pause_overlay, (0, 0))
+                    # Texto
+                    pause_title = font_timer.render("PAUSA", True, (255, 255, 0))
+                    screen.blit(pause_title, pause_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.30))))
+                    # Botones
+                    btn_resume = pygame.Rect(SCREEN_W // 2 - 140, int(SCREEN_H * 0.42), 280, 50)
+                    btn_menu = pygame.Rect(SCREEN_W // 2 - 140, int(SCREEN_H * 0.52), 280, 50)
+                    btn_quit = pygame.Rect(SCREEN_W // 2 - 140, int(SCREEN_H * 0.62), 280, 50)
+                    pygame.draw.rect(screen, (38, 166, 154), btn_resume, border_radius=8)
+                    pygame.draw.rect(screen, (100, 100, 100), btn_menu, border_radius=8)
+                    pygame.draw.rect(screen, (239, 83, 80), btn_quit, border_radius=8)
+                    res_txt = font_btn.render("CONTINUAR", True, (255, 255, 255))
+                    menu_txt = font_btn.render("VOLVER AL MENU", True, (255, 255, 255))
+                    quit_txt = font_btn.render("CERRAR JUEGO", True, (255, 255, 255))
+                    screen.blit(res_txt, res_txt.get_rect(center=btn_resume.center))
+                    screen.blit(menu_txt, menu_txt.get_rect(center=btn_menu.center))
+                    screen.blit(quit_txt, quit_txt.get_rect(center=btn_quit.center))
+                    pygame.display.flip()
+                    for p_event in pygame.event.get():
+                        if p_event.type == pygame.QUIT:
+                            paused = False
+                            running = False
+                        elif p_event.type == pygame.KEYDOWN:
+                            if p_event.key == pygame.K_ESCAPE:
+                                paused = False  # Continuar
+                        elif p_event.type == pygame.MOUSEBUTTONDOWN and p_event.button == 1:
+                            pmx, pmy = p_event.pos
+                            if btn_resume.collidepoint(pmx, pmy):
+                                paused = False
+                            elif btn_menu.collidepoint(pmx, pmy):
+                                paused = False
+                                running = False
+                                # TODO: volver al menú en V2
+                            elif btn_quit.collidepoint(pmx, pmy):
+                                paused = False
+                                running = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
             print(f"[CLICK] x={mx}, y={my}")
