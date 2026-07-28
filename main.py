@@ -1182,9 +1182,9 @@ while app_running:
                         bot_hour_start = current_time
                     if bot_ops_this_hour >= BOT_MAX_OPS_HOUR:
                         can_trade = False
-                    if can_trade and zone_detected is not None:
+                    if can_trade and zone_detected is not None and zone_detected.get("source") == "EXTREMO":
                         entry_price = current_candle["close"]
-                        # Bot inteligente: decide según el tipo de zona
+                        # Bot LEAN FX: solo opera EXTREMO
                         if zone_detected["type"] == "ALCISTA":
                             bot_decision = "BUY"
                         else:
@@ -1289,7 +1289,7 @@ while app_running:
                         if zone_id not in zones_mitigated and active_ob["low"] <= price_now <= active_ob["high"]:
                             zone_frozen = True
                             zone_timer_start = current_time
-                            zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"]}
+                            zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"], "source": "EXTREMO"}
                             zones_mitigated.add(zone_id)
                     # Verificar Decisional
                     if not zone_frozen and active_decisional is not None:
@@ -1297,7 +1297,7 @@ while app_running:
                         if zone_id not in zones_mitigated and active_decisional["low"] <= price_now <= active_decisional["high"]:
                             zone_frozen = True
                             zone_timer_start = current_time
-                            zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"]}
+                            zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"], "source": "DECISIONAL"}
                             zones_mitigated.add(zone_id)
                     # FVG NO se opera por ahora (solo se dibuja)
                     # if not zone_frozen and active_fvg is not None:
@@ -1823,6 +1823,25 @@ while app_running:
                 pnl_pct = (pnl_points / active_trade["entry"]) * 100
                 pnl_txt = font_timer.render(f"{pnl_pct:+.1f}%", True, pnl_color)
                 screen.blit(pnl_txt, (info_x, info_y + 25))
+                # Viewers también operan al mismo tiempo - mostrar su panel
+                if viewer_votes:
+                    buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
+                    sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
+                    vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
+                    vbox_x = int(SCREEN_W * 0.05)
+                    vbox_y = int(SCREEN_H * 0.12)
+                    vbox_w = int(SCREEN_W * 0.16)
+                    vbox_h = int(SCREEN_H * 0.045)
+                    vote_bg = pygame.Surface((vbox_w, vbox_h), pygame.SRCALPHA)
+                    vote_bg.fill((10, 10, 20, 200))
+                    screen.blit(vote_bg, (vbox_x, vbox_y))
+                    pygame.draw.rect(screen, (0, 150, 180), (vbox_x, vbox_y, vbox_w, vbox_h), 1, border_radius=3)
+                    vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
+                    screen.blit(vw_txt, (vbox_x + 5, vbox_y + 2))
+                    buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
+                    sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
+                    screen.blit(buy_txt, (vbox_x + 5, vbox_y + int(SCREEN_H * 0.022)))
+                    screen.blit(sell_txt, (vbox_x + int(SCREEN_W * 0.08), vbox_y + int(SCREEN_H * 0.022)))
             elif viewer_trade_active is not None:
                 # Viewers operando - mostrar cuadrito
                 info_x = int(SCREEN_W * 0.05)
