@@ -154,13 +154,13 @@ STREAMER_NAME = "LEAN FX"
 candles = []
 price = 1000
 trend_dir = random.choice([-1, 1])
-trend_length = random.randint(8, 16)
+trend_length = random.randint(15, 30)
 trend_count = 0
 for _ in range(180):
     trend_count += 1
     if trend_count >= trend_length:
         trend_dir *= -1
-        trend_length = random.randint(8, 16)
+        trend_length = random.randint(15, 30)
         trend_count = 0
     if random.random() < 0.75:
         body = random.uniform(3, 10) * trend_dir
@@ -178,7 +178,7 @@ zone_time_left = 0.0
 active_trade = None
 TRADE_RISK = 100  # Siempre pierdes 100 FXP, sin importar el tamaño del SL
 TP_MULTIPLIER = 3.0  # Risk:Reward 1:3
-SL_BUFFER = 3.0  # Pips de respiro para el SL (justo debajo de la zona)
+SL_BUFFER = 2.0  # Pips de respiro para el SL (reducido 30%)
 TIMER_DURATION = 10000  # 10 segundos en ms (temporal para pruebas)
 trade_history = []
 font_btn = pygame.font.SysFont("Arial", 20, bold=True)
@@ -1891,49 +1891,29 @@ while app_running:
                 # Label "VIEWERS" al lado
                 v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
                 screen.blit(v_label, (line_end_x + 5, entry_y - 8))
-            # --- CONTADOR DE VOTOS (debajo del SL, se queda hasta que cierre) ---
-            if viewer_votes and viewer_trade_active is not None:
+            # --- CONTADOR DE VOTOS (posición fija abajo-izquierda) ---
+            if viewer_votes and (viewer_trade_active is not None or zone_frozen):
                 buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
                 sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
                 vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.017), bold=True)
-                # Posicionar debajo del SL con espacio
-                vt_sl_y = center_y - int((viewer_trade_active["sl"] - view_center_price) * vertical_zoom)
-                vote_y = vt_sl_y + 25
-                # Centrado horizontalmente en el gráfico
-                vote_x = int(SCREEN_W * 0.30)
-                # Fondo oscuro con buen contraste
-                vote_w = int(SCREEN_W * 0.20)
-                vote_h = int(SCREEN_H * 0.05)
+                # Posición fija abajo-izquierda
+                vote_x = int(SCREEN_W * 0.02)
+                vote_y = int(SCREEN_H * 0.88)
+                # Fondo oscuro con borde
+                vote_w = int(SCREEN_W * 0.16)
+                vote_h = int(SCREEN_H * 0.055)
                 vote_bg = pygame.Surface((vote_w, vote_h), pygame.SRCALPHA)
-                vote_bg.fill((10, 10, 20, 200))
-                screen.blit(vote_bg, (vote_x - 8, vote_y - 5))
-                pygame.draw.rect(screen, (0, 150, 180), (vote_x - 8, vote_y - 5, vote_w, vote_h), 1, border_radius=3)
-                # Label VIEWERS arriba
+                vote_bg.fill((10, 10, 20, 210))
+                screen.blit(vote_bg, (vote_x, vote_y))
+                pygame.draw.rect(screen, (0, 150, 180), (vote_x, vote_y, vote_w, vote_h), 1, border_radius=3)
+                # Label VIEWERS
                 vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
-                screen.blit(vw_txt, (vote_x, vote_y))
-                # BUY / SELL abajo
+                screen.blit(vw_txt, (vote_x + 5, vote_y + 3))
+                # BUY / SELL
                 buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
                 sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
-                screen.blit(buy_txt, (vote_x, vote_y + int(SCREEN_H * 0.020)))
-                screen.blit(sell_txt, (vote_x + int(SCREEN_W * 0.08), vote_y + int(SCREEN_H * 0.020)))
-            elif viewer_votes and zone_frozen:
-                buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
-                sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
-                vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.017), bold=True)
-                vote_x = int(SCREEN_W * 0.30)
-                vote_y = int(SCREEN_H * 0.20)
-                vote_w = int(SCREEN_W * 0.20)
-                vote_h = int(SCREEN_H * 0.05)
-                vote_bg = pygame.Surface((vote_w, vote_h), pygame.SRCALPHA)
-                vote_bg.fill((10, 10, 20, 200))
-                screen.blit(vote_bg, (vote_x - 8, vote_y - 5))
-                pygame.draw.rect(screen, (0, 150, 180), (vote_x - 8, vote_y - 5, vote_w, vote_h), 1, border_radius=3)
-                vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
-                screen.blit(vw_txt, (vote_x, vote_y))
-                buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
-                sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
-                screen.blit(buy_txt, (vote_x, vote_y + int(SCREEN_H * 0.020)))
-                screen.blit(sell_txt, (vote_x + int(SCREEN_W * 0.08), vote_y + int(SCREEN_H * 0.020)))
+                screen.blit(buy_txt, (vote_x + 5, vote_y + int(SCREEN_H * 0.025)))
+                screen.blit(sell_txt, (vote_x + int(SCREEN_W * 0.08), vote_y + int(SCREEN_H * 0.025)))
         # --- FLASH AL GANAR/PERDER ---
         if flash_active:
             flash_elapsed = current_time - flash_start_time
