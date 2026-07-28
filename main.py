@@ -92,15 +92,7 @@ font_top = pygame.font.SysFont("Arial", 14, bold=True)
 check_monthly_reset()
 # Crear jugadores de prueba si la DB está vacía
 db_top = get_top_players(10)
-# Siempre regenerar con datos limpios (borrar DB vieja)
-if True:
-    import sqlite3 as _sq
-    _conn = _sq.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lean_fx_game.db"))
-    _conn.execute("DELETE FROM players WHERE username != 'LEAN FX'")
-    _conn.execute("UPDATE players SET balance = 10000, wins = 0, losses = 0 WHERE username = 'LEAN FX'")
-    _conn.commit()
-    _conn.close()
-    db_top = []
+# Solo crear jugadores si la DB está vacía
 if len(db_top) == 0:
     test_players = ["crypto_wolf", "trader_mike", "fx_queen", "bull_master", "sniper_pro",
                     "gold_trader", "scalp_king", "pip_hunter", "chart_ninja", "forex_ace"]
