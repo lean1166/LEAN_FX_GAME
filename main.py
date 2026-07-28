@@ -2,6 +2,9 @@ import sys
 import os
 import random
 import pygame
+from database import (init_db, get_top_players, get_streamer_stats, 
+                      update_player_balance, add_trade_history, 
+                      check_monthly_reset, get_config, create_player)
 
 try:
     pygame.init()
