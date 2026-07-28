@@ -484,6 +484,8 @@ current_candle = {"open": candles[-1]["close"], "close": candles[-1]["close"], "
 # === LOOP PRINCIPAL ===
 app_running = True
 while app_running:
+    running = True
+    game_started = False
     # === MENÚ DE INICIO ===
     font_menu_title = pygame.font.SysFont("Arial", 60, bold=True)
     font_menu_btn = pygame.font.SysFont("Arial", 28, bold=True)
