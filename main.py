@@ -735,18 +735,20 @@ while app_running:
                     # Título
                     rank_title = font_timer.render("RANKING GENERAL", True, (0, 220, 255))
                     screen.blit(rank_title, rank_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.06))))
-                    # Línea separadora
-                    pygame.draw.line(screen, (0, 100, 150), (int(SCREEN_W * 0.1), int(SCREEN_H * 0.11)), (int(SCREEN_W * 0.9), int(SCREEN_H * 0.11)), 1)
-                    # Headers
-                    headers = ["#", "JUGADOR", "BALANCE", "W", "L", "WIN%"]
-                    hx_positions = [0.08, 0.22, 0.42, 0.58, 0.68, 0.82]
-                    for i, h in enumerate(headers):
-                        h_txt = font_hud_title.render(h, True, (150, 150, 150))
-                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.13)))
-                    # Obtener todos los jugadores
+                    # Total jugadores arriba derecha
                     all_players = get_all_players_ranked()
+                    total_txt = font_top.render(f"{len(all_players)} jugadores activos", True, (100, 150, 180))
+                    screen.blit(total_txt, (int(SCREEN_W * 0.78), int(SCREEN_H * 0.04)))
+                    # Línea separadora
+                    pygame.draw.line(screen, (0, 100, 150), (int(SCREEN_W * 0.05), int(SCREEN_H * 0.11)), (int(SCREEN_W * 0.95), int(SCREEN_H * 0.11)), 1)
+                    # Headers
+                    headers = ["#", "JUGADOR", "BALANCE", "W", "L", "WIN RATE"]
+                    hx_positions = [0.06, 0.14, 0.38, 0.52, 0.62, 0.74]
+                    for i, h in enumerate(headers):
+                        h_txt = font_hud_title.render(h, True, (100, 120, 140))
+                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.13)))
                     # Dibujar filas
-                    row_h = int(SCREEN_H * 0.05)
+                    row_h = int(SCREEN_H * 0.06)
                     visible_rows = int(SCREEN_H * 0.75) // row_h
                     start_y = int(SCREEN_H * 0.18)
                     for idx in range(min(visible_rows, len(all_players) - ranking_scroll)):
@@ -755,30 +757,69 @@ while app_running:
                             break
                         p = all_players[p_idx]
                         ry = start_y + (idx * row_h)
-                        # Fondo alternado
-                        if idx % 2 == 0:
-                            row_bg = pygame.Surface((int(SCREEN_W * 0.84), row_h), pygame.SRCALPHA)
-                            row_bg.fill((20, 25, 40, 150))
-                            screen.blit(row_bg, (int(SCREEN_W * 0.07), ry))
-                        # Color según ranking
+                        # Fondo de fila
+                        row_bg = pygame.Surface((int(SCREEN_W * 0.90), row_h - 2), pygame.SRCALPHA)
+                        if p_idx == 0:
+                            row_bg.fill((50, 40, 0, 80))  # Dorado oscuro para #1
+                        elif idx % 2 == 0:
+                            row_bg.fill((20, 25, 40, 120))
+                        else:
+                            row_bg.fill((15, 18, 30, 80))
+                        screen.blit(row_bg, (int(SCREEN_W * 0.05), ry))
+                        # Borde lateral de color para TOP 3
+                        if p_idx == 0:
+                            pygame.draw.rect(screen, (255, 215, 0), (int(SCREEN_W * 0.05), ry, 4, row_h - 2))
+                        elif p_idx == 1:
+                            pygame.draw.rect(screen, (192, 192, 192), (int(SCREEN_W * 0.05), ry, 4, row_h - 2))
+                        elif p_idx == 2:
+                            pygame.draw.rect(screen, (205, 127, 50), (int(SCREEN_W * 0.05), ry, 4, row_h - 2))
+                        # Color del ranking
                         if p_idx == 0:
                             r_color = (255, 215, 0)
+                            medal = "1"
                         elif p_idx == 1:
                             r_color = (192, 192, 192)
+                            medal = "2"
                         elif p_idx == 2:
                             r_color = (205, 127, 50)
+                            medal = "3"
                         else:
-                            r_color = (255, 255, 255)
-                        # Datos
+                            r_color = (180, 180, 180)
+                            medal = str(p_idx + 1)
+                        # # con medalla
+                        medal_txt = font_hud_title.render(medal, True, r_color)
+                        screen.blit(medal_txt, (int(SCREEN_W * hx_positions[0]) + 5, ry + 10))
+                        # Nombre
+                        name_txt = font_hud_title.render(p["username"], True, (255, 255, 255))
+                        screen.blit(name_txt, (int(SCREEN_W * hx_positions[1]), ry + 10))
+                        # Balance
+                        bal_txt = font_hud_title.render(f"${int(p['balance'])}", True, (0, 220, 255))
+                        screen.blit(bal_txt, (int(SCREEN_W * hx_positions[2]), ry + 10))
+                        # W
+                        w_txt = font_top.render(str(p["wins"]), True, (38, 166, 154))
+                        screen.blit(w_txt, (int(SCREEN_W * hx_positions[3]), ry + 12))
+                        # L
+                        l_txt = font_top.render(str(p["losses"]), True, (239, 83, 80))
+                        screen.blit(l_txt, (int(SCREEN_W * hx_positions[4]), ry + 12))
+                        # Win Rate con barra visual
                         total = p["wins"] + p["losses"]
                         wr = int((p["wins"] / total * 100)) if total > 0 else 0
-                        values = [f"{p_idx + 1}", p["username"], f"${int(p['balance'])}", str(p["wins"]), str(p["losses"]), f"{wr}%"]
-                        colors = [r_color, (255, 255, 255), (0, 220, 255), (38, 166, 154), (239, 83, 80), (200, 200, 200)]
-                        for i, val in enumerate(values):
-                            v_txt = font_top.render(val, True, colors[i])
-                            screen.blit(v_txt, (int(SCREEN_W * hx_positions[i]), ry + 8))
+                        wr_x = int(SCREEN_W * hx_positions[5])
+                        # Barra de fondo
+                        bar_w_wr = int(SCREEN_W * 0.12)
+                        bar_h_wr = 10
+                        bar_y_wr = ry + 14
+                        pygame.draw.rect(screen, (30, 30, 40), (wr_x, bar_y_wr, bar_w_wr, bar_h_wr), border_radius=5)
+                        # Barra de progreso
+                        fill_w = int(bar_w_wr * (wr / 100))
+                        wr_bar_color = (38, 166, 154) if wr >= 50 else (239, 83, 80)
+                        if fill_w > 0:
+                            pygame.draw.rect(screen, wr_bar_color, (wr_x, bar_y_wr, fill_w, bar_h_wr), border_radius=5)
+                        # Texto del porcentaje
+                        wr_txt = font_top.render(f"{wr}%", True, (255, 255, 255))
+                        screen.blit(wr_txt, (wr_x + bar_w_wr + 8, ry + 12))
                     # Instrucción abajo
-                    back_txt = font_top.render("Presiona ESC para volver", True, (100, 100, 100))
+                    back_txt = font_top.render("ESC = Volver | Flechas = Scroll", True, (80, 80, 80))
                     screen.blit(back_txt, back_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.95))))
                     pygame.display.flip()
                     for r_event in pygame.event.get():
@@ -790,7 +831,7 @@ while app_running:
                             if r_event.key == pygame.K_ESCAPE:
                                 in_ranking = False
                             elif r_event.key == pygame.K_DOWN:
-                                if ranking_scroll < len(all_players) - visible_rows:
+                                if ranking_scroll < max(0, len(all_players) - visible_rows):
                                     ranking_scroll += 1
                             elif r_event.key == pygame.K_UP:
                                 if ranking_scroll > 0:
