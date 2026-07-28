@@ -537,12 +537,12 @@ while in_menu and running:
         elif menu_click_btn == "config":
             menu_selection = "config"
         menu_click_btn = None
-    # Áreas de botones (posiciones relativas a la imagen 1920x1080)
-    btn_w, btn_h = int(SCREEN_W * 0.28), int(SCREEN_H * 0.065)
-    btn_x = SCREEN_W // 2 - btn_w // 2
-    btn_iniciar = pygame.Rect(btn_x, int(SCREEN_H * 0.47), btn_w, btn_h)
-    btn_ranking = pygame.Rect(btn_x, int(SCREEN_H * 0.60), btn_w, btn_h)
-    btn_config = pygame.Rect(btn_x, int(SCREEN_H * 0.73), btn_w, btn_h)
+    # Áreas de botones calibradas con clicks en 1366x768
+    btn_w = int(SCREEN_W * 0.28)
+    btn_h = int(SCREEN_H * 0.08)
+    btn_iniciar = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (341/768)) - btn_h // 2, btn_w, btn_h)
+    btn_ranking = pygame.Rect(int(SCREEN_W * (686/1366)) - btn_w // 2, int(SCREEN_H * (476/768)) - btn_h // 2, btn_w, btn_h)
+    btn_config = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (607/768)) - btn_h // 2, btn_w, btn_h)
     # Dibujar efecto click (oscurecer + bajar)
     buttons = [("iniciar", btn_iniciar), ("ranking", btn_ranking), ("config", btn_config)]
     for btn_name, btn_rect in buttons:
