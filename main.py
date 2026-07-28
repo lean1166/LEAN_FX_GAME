@@ -617,12 +617,6 @@ while app_running:
                 fog_alpha = int(12 * (1 - abs(fy - fog_h // 2) / (fog_h // 2)))
                 pygame.draw.line(fog_surface, (100, 150, 180, fog_alpha), (fog_x, fog_y + fy), (fog_x + fog_w, fog_y + fy))
         screen.blit(fog_surface, (0, 0))
-        # Glow pulsante en los bordes de los botones
-        glow_alpha = int(60 + 40 * math.sin(current_time / 500.0))
-        glow_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        for btn_r in [btn_iniciar, btn_ranking, btn_config]:
-            pygame.draw.rect(glow_surface, (0, 220, 255, glow_alpha), btn_r.inflate(6, 6), 2, border_radius=10)
-        screen.blit(glow_surface, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 # Diálogo ¿Cerrar juego?
