@@ -755,6 +755,8 @@ while app_running:
                                 elif btn_menu.collidepoint(pmx, pmy):
                                         paused = False
                                         running = False
+                                        if sound_game_music is not None:
+                                            sound_game_music.stop()
                                 elif btn_quit.collidepoint(pmx, pmy):
                                     paused = False
                                     running = False
