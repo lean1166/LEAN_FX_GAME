@@ -568,6 +568,8 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 # Diálogo de pausa: ¿Volver al menú o cerrar?
                 paused = True
+                pygame.event.clear()  # Limpiar cola para que ESC no se repita
+                pygame.time.wait(100)  # Pequeña espera
                 while paused:
                     # Fondo oscuro semi-transparente
                     pause_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
