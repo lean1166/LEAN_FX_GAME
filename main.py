@@ -246,6 +246,10 @@ bot_ops_this_hour = 0
 bot_hour_start = 0
 bot_bias_active = False  # True cuando el precio tiene sesgo a favor del bot
 bot_bias_direction = 0  # 1 = arriba, -1 = abajo
+# --- BOTS SIMULADOS (viewers falsos que operan para testear el ranking) ---
+VIEWER_BOTS_ENABLED = True  # Poner False para desactivar
+VIEWER_BOT_INTERVAL = 8000  # Cada 8 segundos un viewer opera
+viewer_bot_last_time = 0
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -1340,6 +1344,31 @@ while app_running:
                             zone_timer_start = current_time
                             zone_detected = {"high": active_fvg["high"], "low": active_fvg["low"], "type": active_fvg["type"]}
                             zones_mitigated.add(zone_id)
+        # --- BOTS VIEWERS SIMULADOS (operan aleatoriamente para mover el ranking) ---
+        if VIEWER_BOTS_ENABLED and game_started and current_time - viewer_bot_last_time > VIEWER_BOT_INTERVAL:
+            viewer_bot_last_time = current_time
+            # Elegir un viewer aleatorio del TOP 5+
+            all_viewer_names = [v["name"] for v in load_top_viewers()]
+            if all_viewer_names:
+                chosen = random.choice(all_viewer_names)
+                # 55% gana, 45% pierde (para que el ranking se mueva)
+                if random.random() < 0.55:
+                    # Ganar entre 50-200 FXP
+                    gain = random.randint(50, 200)
+                    p = get_top_players(10)
+                    for pl in p:
+                        if pl["username"] == chosen:
+                            update_player_balance(chosen, pl["balance"] + gain, win=True)
+                            break
+                else:
+                    # Perder entre 50-150 FXP
+                    loss_amt = random.randint(50, 150)
+                    p = get_top_players(10)
+                    for pl in p:
+                        if pl["username"] == chosen:
+                            new_bal = max(8000, pl["balance"] - loss_amt)
+                            update_player_balance(chosen, new_bal, loss=True)
+                            break
         if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
             candles.append(current_candle.copy())
             if len(candles) > 1000:
