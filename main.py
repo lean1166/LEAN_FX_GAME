@@ -606,7 +606,35 @@ while running:
                             elif btn_menu.collidepoint(pmx, pmy):
                                 paused = False
                                 running = False
-                                # Reiniciar el juego para volver al menú
+                                # Pantalla de carga
+                                screen.fill((10, 10, 15))
+                                loading_txt = font_timer.render("CARGANDO...", True, (0, 220, 255))
+                                screen.blit(loading_txt, loading_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                                # Barra de carga animada
+                                bar_w_load = int(SCREEN_W * 0.30)
+                                bar_h_load = 14
+                                bar_x_load = SCREEN_W // 2 - bar_w_load // 2
+                                bar_y_load = int(SCREEN_H * 0.52)
+                                pygame.draw.rect(screen, (40, 40, 40), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), border_radius=7)
+                                pygame.draw.rect(screen, (0, 180, 220), (bar_x_load, bar_y_load, bar_w_load // 3, bar_h_load), border_radius=7)
+                                pygame.draw.rect(screen, (80, 80, 80), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), 1, border_radius=7)
+                                pygame.display.flip()
+                                pygame.time.wait(800)
+                                # Segunda fase de carga
+                                pygame.draw.rect(screen, (10, 10, 15), (bar_x_load, bar_y_load, bar_w_load, bar_h_load))
+                                pygame.draw.rect(screen, (40, 40, 40), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), border_radius=7)
+                                pygame.draw.rect(screen, (0, 180, 220), (bar_x_load, bar_y_load, int(bar_w_load * 0.7), bar_h_load), border_radius=7)
+                                pygame.draw.rect(screen, (80, 80, 80), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), 1, border_radius=7)
+                                pygame.display.flip()
+                                pygame.time.wait(600)
+                                # Barra completa
+                                pygame.draw.rect(screen, (10, 10, 15), (bar_x_load, bar_y_load, bar_w_load, bar_h_load))
+                                pygame.draw.rect(screen, (40, 40, 40), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), border_radius=7)
+                                pygame.draw.rect(screen, (0, 220, 255), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), border_radius=7)
+                                pygame.draw.rect(screen, (80, 80, 80), (bar_x_load, bar_y_load, bar_w_load, bar_h_load), 1, border_radius=7)
+                                pygame.display.flip()
+                                pygame.time.wait(400)
+                                # Reiniciar
                                 pygame.quit()
                                 os.execv(sys.executable, [sys.executable] + sys.argv)
                             elif btn_quit.collidepoint(pmx, pmy):
