@@ -623,6 +623,7 @@ while app_running:
                                 elif btn_quit.collidepoint(pmx, pmy):
                                     paused = False
                                     running = False
+                                    app_running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 print(f"[CLICK] x={mx}, y={my}")
