@@ -1421,25 +1421,26 @@ while app_running:
             last_candle_time = current_time
         all_candles = candles + [current_candle]
         total_len = len(all_candles)
-        needed_count = 100
+        needed_count = 60  # Base: mostrar últimas 60 velas
+        # Solo mirar el último rango (no ir tan atrás)
         if prev_range_low_index is not None:
             distance = total_len - prev_range_low_index
-            if distance > needed_count:
+            if distance > needed_count and distance < 120:
                 needed_count = distance + 10
         if prev_range_high_index is not None:
             distance = total_len - prev_range_high_index
-            if distance > needed_count:
+            if distance > needed_count and distance < 120:
                 needed_count = distance + 10
         if range_phase == "rango_definido":
             if range_high_index is not None:
                 distance = total_len - range_high_index
-                if distance > needed_count:
+                if distance > needed_count and distance < 120:
                     needed_count = distance + 10
             if range_low_index is not None:
                 distance = total_len - range_low_index
-                if distance > needed_count:
+                if distance > needed_count and distance < 120:
                     needed_count = distance + 10
-        needed_count = max(100, min(needed_count, 300))
+        needed_count = max(50, min(needed_count, 150))
         new_target = float(needed_count)
         # Sonido de ZOOM cuando el zoom cambia significativamente
         if abs(new_target - target_visible_count) > 15:
