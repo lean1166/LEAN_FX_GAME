@@ -1344,31 +1344,37 @@ while app_running:
                             zone_timer_start = current_time
                             zone_detected = {"high": active_fvg["high"], "low": active_fvg["low"], "type": active_fvg["type"]}
                             zones_mitigated.add(zone_id)
-        # --- BOTS VIEWERS SIMULADOS (operan aleatoriamente para mover el ranking) ---
-        if VIEWER_BOTS_ENABLED and game_started and current_time - viewer_bot_last_time > VIEWER_BOT_INTERVAL:
-            viewer_bot_last_time = current_time
-            # Elegir un viewer aleatorio del TOP 5+
+        # --- BOTS VIEWERS SIMULADOS (solo operan durante la ventana de decisión) ---
+        # Simulan que los viewers votan BUY/SELL cuando aparece la zona
+        if VIEWER_BOTS_ENABLED and game_started and zone_frozen and not getattr(pygame, '_viewers_voted_this_zone', False):
+            # Solo votan una vez por zona (cuando se congela)
+            pygame._viewers_voted_this_zone = True
+            # Entre 2 y 4 viewers operan por zona
+            num_voters = random.randint(2, 4)
             all_viewer_names = [v["name"] for v in load_top_viewers()]
             if all_viewer_names:
-                chosen = random.choice(all_viewer_names)
-                # 55% gana, 45% pierde (para que el ranking se mueva)
-                if random.random() < 0.55:
-                    # Ganar entre 50-200 FXP
-                    gain = random.randint(50, 200)
-                    p = get_top_players(10)
-                    for pl in p:
-                        if pl["username"] == chosen:
-                            update_player_balance(chosen, pl["balance"] + gain, win=True)
-                            break
-                else:
-                    # Perder entre 50-150 FXP
-                    loss_amt = random.randint(50, 150)
-                    p = get_top_players(10)
-                    for pl in p:
-                        if pl["username"] == chosen:
-                            new_bal = max(8000, pl["balance"] - loss_amt)
-                            update_player_balance(chosen, new_bal, loss=True)
-                            break
+                voters = random.sample(all_viewer_names, min(num_voters, len(all_viewer_names)))
+                for chosen in voters:
+                    # Los que eligen correctamente ganan, los que no pierden
+                    # 55% acierta la dirección
+                    if random.random() < 0.55:
+                        gain = random.randint(80, 250)
+                        p = get_top_players(10)
+                        for pl in p:
+                            if pl["username"] == chosen:
+                                update_player_balance(chosen, pl["balance"] + gain, win=True)
+                                break
+                    else:
+                        loss_amt = random.randint(60, 150)
+                        p = get_top_players(10)
+                        for pl in p:
+                            if pl["username"] == chosen:
+                                new_bal = max(8000, pl["balance"] - loss_amt)
+                                update_player_balance(chosen, new_bal, loss=True)
+                                break
+        # Resetear flag cuando se descongela
+        if not zone_frozen:
+            pygame._viewers_voted_this_zone = False
         if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
             candles.append(current_candle.copy())
             if len(candles) > 1000:
