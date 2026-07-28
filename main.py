@@ -512,6 +512,44 @@ while app_running:
     menu_selection = None
     game_started = False
 
+    # Animaciones del menú
+    import math
+    # Partículas flotantes
+    menu_particles = []
+    for _ in range(30):
+        menu_particles.append({
+            "x": random.randint(0, SCREEN_W),
+            "y": random.randint(0, SCREEN_H),
+            "speed": random.uniform(0.3, 1.2),
+            "size": random.randint(1, 3),
+            "color": random.choice([(0, 220, 255), (255, 200, 0), (0, 180, 200), (200, 170, 0)]),
+            "alpha": random.randint(80, 200),
+        })
+    # Velas japonesas de fondo
+    menu_candles = []
+    for i in range(15):
+        h = random.randint(30, 120)
+        menu_candles.append({
+            "x": random.randint(0, SCREEN_W),
+            "y": random.randint(int(SCREEN_H * 0.2), int(SCREEN_H * 0.8)),
+            "w": random.randint(8, 14),
+            "h": h,
+            "color": random.choice([(38, 166, 154), (239, 83, 80)]),
+            "speed": random.uniform(0.2, 0.6),
+        })
+    # Barra de luz
+    menu_light_x = 0
+    menu_light_speed = 3
+    # Líneas neón
+    menu_neon_lines = []
+    for _ in range(5):
+        menu_neon_lines.append({
+            "y": random.randint(50, SCREEN_H - 50),
+            "alpha": random.randint(0, 255),
+            "speed": random.uniform(1, 4),
+            "direction": 1,
+        })
+
     # --- MENÚ ---
     while in_menu and app_running:
         clock.tick(60)
@@ -521,6 +559,50 @@ while app_running:
             screen.blit(menu_bg, (0, 0))
         else:
             screen.fill((15, 15, 25))
+        # --- ANIMACIONES DEL MENÚ ---
+        # Velas japonesas de fondo (opacidad baja)
+        candle_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        for c in menu_candles:
+            c["x"] -= c["speed"]
+            if c["x"] < -20:
+                c["x"] = SCREEN_W + 20
+                c["y"] = random.randint(int(SCREEN_H * 0.2), int(SCREEN_H * 0.8))
+            col = (c["color"][0], c["color"][1], c["color"][2], 35)
+            pygame.draw.rect(candle_surface, col, (int(c["x"]), int(c["y"]), c["w"], c["h"]))
+            # Mecha
+            wick_col = (c["color"][0], c["color"][1], c["color"][2], 25)
+            pygame.draw.line(candle_surface, wick_col, (int(c["x"]) + c["w"] // 2, int(c["y"]) - 15), (int(c["x"]) + c["w"] // 2, int(c["y"])), 1)
+            pygame.draw.line(candle_surface, wick_col, (int(c["x"]) + c["w"] // 2, int(c["y"]) + c["h"]), (int(c["x"]) + c["w"] // 2, int(c["y"]) + c["h"] + 15), 1)
+        screen.blit(candle_surface, (0, 0))
+        # Partículas flotantes
+        for p in menu_particles:
+            p["y"] -= p["speed"]
+            if p["y"] < -5:
+                p["y"] = SCREEN_H + 5
+                p["x"] = random.randint(0, SCREEN_W)
+            ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
+            pygame.draw.circle(ps, (p["color"][0], p["color"][1], p["color"][2], p["alpha"]), (p["size"], p["size"]), p["size"])
+            screen.blit(ps, (int(p["x"]), int(p["y"])))
+        # Barra de luz horizontal
+        menu_light_x += menu_light_speed
+        if menu_light_x > SCREEN_W:
+            menu_light_x = -100
+        light_surface = pygame.Surface((100, 2), pygame.SRCALPHA)
+        for lx in range(100):
+            alpha = int(150 * (1 - abs(lx - 50) / 50))
+            light_surface.set_at((lx, 0), (0, 220, 255, alpha))
+            light_surface.set_at((lx, 1), (0, 220, 255, alpha // 2))
+        screen.blit(light_surface, (int(menu_light_x), int(SCREEN_H * 0.48)))
+        # Líneas neón parpadeantes
+        for nl in menu_neon_lines:
+            nl["alpha"] += nl["speed"] * nl["direction"]
+            if nl["alpha"] >= 120:
+                nl["direction"] = -1
+            elif nl["alpha"] <= 10:
+                nl["direction"] = 1
+            neon_s = pygame.Surface((SCREEN_W, 1), pygame.SRCALPHA)
+            neon_s.fill((0, 180, 220, int(nl["alpha"])))
+            screen.blit(neon_s, (0, nl["y"]))
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 # Diálogo ¿Cerrar juego?
