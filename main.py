@@ -726,89 +726,60 @@ while app_running:
                     sound_game_music.set_volume(0.3)
                     sound_game_music.play(loops=-1)
             elif menu_click_btn == "ranking":
-                # Pantalla de RANKING (TOP 5 PNG arriba + tabla abajo)
+                # Pantalla de RANKING
                 in_ranking = True
                 ranking_scroll = 0
-                # Cargar imagen TOP 5 para la pantalla de ranking
-                rank_top5_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
-                rank_top5_img = None
-                if os.path.exists(rank_top5_path):
-                    rank_top5_img = pygame.image.load(rank_top5_path).convert_alpha()
                 while in_ranking:
                     clock.tick(60)
                     screen.fill((10, 15, 25))
-                    # TOP 5 con imagen PNG (arriba, centrado)
-                    top5_data = get_top_players(5)
-                    if rank_top5_img is not None:
-                        # Escalar imagen al 40% del alto
-                        rk_h = int(SCREEN_H * 0.45)
-                        rk_w = int(rk_h * (rank_top5_img.get_width() / rank_top5_img.get_height()))
-                        rk_scaled = pygame.transform.smoothscale(rank_top5_img, (rk_w, rk_h))
-                        rk_x = SCREEN_W // 2 - rk_w // 2
-                        rk_y = int(SCREEN_H * 0.02)
-                        screen.blit(rk_scaled, (rk_x, rk_y))
-                        # Texto sobre la imagen (nombres y stats del TOP 5)
-                        # Posiciones relativas a la imagen
-                        rk_title_offset = rk_h * 0.08
-                        rk_card_h = rk_h * 0.184
-                        for ti, tp in enumerate(top5_data[:5]):
-                            card_y = rk_y + rk_title_offset + (ti * rk_card_h)
-                            # Nombre
-                            n_x = rk_x + int(rk_w * 0.50)
-                            n_y = int(card_y + rk_card_h * 0.30)
-                            n_txt = font_top.render(tp["username"], True, (255, 255, 255))
-                            n_rect = n_txt.get_rect(center=(n_x, n_y))
-                            screen.blit(n_txt, n_rect)
-                            # W L WIN%
-                            total_t = tp["wins"] + tp["losses"]
-                            wr_t = int((tp["wins"] / total_t * 100)) if total_t > 0 else 0
-                            stats_y = int(card_y + rk_card_h * 0.75)
-                            w_txt = font_top.render(str(tp["wins"]), True, (38, 166, 154))
-                            l_txt = font_top.render(str(tp["losses"]), True, (239, 83, 80))
-                            wr_txt = font_top.render(f"{wr_t}%", True, (0, 220, 255))
-                            screen.blit(w_txt, w_txt.get_rect(center=(rk_x + int(rk_w * 0.30), stats_y)))
-                            screen.blit(l_txt, l_txt.get_rect(center=(rk_x + int(rk_w * 0.50), stats_y)))
-                            screen.blit(wr_txt, wr_txt.get_rect(center=(rk_x + int(rk_w * 0.72), stats_y)))
+                    # Título
+                    rank_title = font_timer.render("RANKING GENERAL", True, (0, 220, 255))
+                    screen.blit(rank_title, rank_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.06))))
                     # Línea separadora
-                    sep_y = int(SCREEN_H * 0.50)
-                    pygame.draw.line(screen, (0, 100, 150), (int(SCREEN_W * 0.1), sep_y), (int(SCREEN_W * 0.9), sep_y), 1)
-                    # Título sección inferior
-                    rest_title = font_hud_title.render("TODOS LOS JUGADORES", True, (150, 150, 150))
-                    screen.blit(rest_title, rest_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.53))))
-                    # Tabla con TODOS los jugadores
-                    all_players = get_all_players_ranked()
+                    pygame.draw.line(screen, (0, 100, 150), (int(SCREEN_W * 0.1), int(SCREEN_H * 0.11)), (int(SCREEN_W * 0.9), int(SCREEN_H * 0.11)), 1)
+                    # Headers
                     headers = ["#", "JUGADOR", "BALANCE", "W", "L", "WIN%"]
                     hx_positions = [0.08, 0.22, 0.42, 0.58, 0.68, 0.82]
                     for i, h in enumerate(headers):
-                        h_txt = font_top.render(h, True, (100, 100, 100))
-                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.56)))
-                    row_h = int(SCREEN_H * 0.04)
-                    visible_rows = int(SCREEN_H * 0.35) // row_h
-                    start_y = int(SCREEN_H * 0.60)
+                        h_txt = font_hud_title.render(h, True, (150, 150, 150))
+                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.13)))
+                    # Obtener todos los jugadores
+                    all_players = get_all_players_ranked()
+                    # Dibujar filas
+                    row_h = int(SCREEN_H * 0.05)
+                    visible_rows = int(SCREEN_H * 0.75) // row_h
+                    start_y = int(SCREEN_H * 0.18)
                     for idx in range(min(visible_rows, len(all_players) - ranking_scroll)):
                         p_idx = idx + ranking_scroll
                         if p_idx >= len(all_players):
                             break
                         p = all_players[p_idx]
                         ry = start_y + (idx * row_h)
+                        # Fondo alternado
                         if idx % 2 == 0:
                             row_bg = pygame.Surface((int(SCREEN_W * 0.84), row_h), pygame.SRCALPHA)
                             row_bg.fill((20, 25, 40, 150))
                             screen.blit(row_bg, (int(SCREEN_W * 0.07), ry))
-                        if p_idx == 0: r_color = (255, 215, 0)
-                        elif p_idx == 1: r_color = (192, 192, 192)
-                        elif p_idx == 2: r_color = (205, 127, 50)
-                        else: r_color = (255, 255, 255)
+                        # Color según ranking
+                        if p_idx == 0:
+                            r_color = (255, 215, 0)
+                        elif p_idx == 1:
+                            r_color = (192, 192, 192)
+                        elif p_idx == 2:
+                            r_color = (205, 127, 50)
+                        else:
+                            r_color = (255, 255, 255)
+                        # Datos
                         total = p["wins"] + p["losses"]
                         wr = int((p["wins"] / total * 100)) if total > 0 else 0
                         values = [f"{p_idx + 1}", p["username"], f"${int(p['balance'])}", str(p["wins"]), str(p["losses"]), f"{wr}%"]
                         colors = [r_color, (255, 255, 255), (0, 220, 255), (38, 166, 154), (239, 83, 80), (200, 200, 200)]
                         for i, val in enumerate(values):
                             v_txt = font_top.render(val, True, colors[i])
-                            screen.blit(v_txt, (int(SCREEN_W * hx_positions[i]), ry + 5))
-                    # Instrucción
-                    back_txt = font_top.render("ESC = Volver | Flechas = Scroll", True, (100, 100, 100))
-                    screen.blit(back_txt, back_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.96))))
+                            screen.blit(v_txt, (int(SCREEN_W * hx_positions[i]), ry + 8))
+                    # Instrucción abajo
+                    back_txt = font_top.render("Presiona ESC para volver", True, (100, 100, 100))
+                    screen.blit(back_txt, back_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.95))))
                     pygame.display.flip()
                     for r_event in pygame.event.get():
                         if r_event.type == pygame.QUIT:
@@ -819,7 +790,7 @@ while app_running:
                             if r_event.key == pygame.K_ESCAPE:
                                 in_ranking = False
                             elif r_event.key == pygame.K_DOWN:
-                                if ranking_scroll < max(0, len(all_players) - visible_rows):
+                                if ranking_scroll < len(all_players) - visible_rows:
                                     ranking_scroll += 1
                             elif r_event.key == pygame.K_UP:
                                 if ranking_scroll > 0:
