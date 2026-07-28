@@ -51,6 +51,8 @@ def trade_win(amount):
     fxp_balance += amount
     wins += 1
     play_sound(sound_win)
+    update_player_balance("LEAN FX", fxp_balance, win=True)
+    add_trade_history("LEAN FX", "BUY", "WIN", amount)
 
 def trade_loss(amount):
     """Llamar cuando se pierde un trade. Resta del balance y reproduce LOSS.mp3"""
@@ -58,6 +60,8 @@ def trade_loss(amount):
     fxp_balance -= amount
     losses += 1
     play_sound(sound_loss)
+    update_player_balance("LEAN FX", fxp_balance, loss=True)
+    add_trade_history("LEAN FX", "SELL", "LOSS", -amount)
 
 pygame.font.init()
 font_price = pygame.font.SysFont("Arial", 16, bold=True)
