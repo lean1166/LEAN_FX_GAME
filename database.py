@@ -209,3 +209,17 @@ def get_all_players_count():
 
 # Inicializar DB al importar
 init_db()
+
+
+
+def get_all_players_ranked():
+    """Obtener todos los jugadores ordenados por balance (excluyendo streamer)"""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""SELECT username, balance, wins, losses 
+                 FROM players 
+                 WHERE username != 'LEAN FX'
+                 ORDER BY balance DESC""")
+    players = c.fetchall()
+    conn.close()
+    return [dict(p) for p in players]
