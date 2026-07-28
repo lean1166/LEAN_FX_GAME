@@ -518,6 +518,7 @@ while in_menu and running:
                 in_menu = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
+            print(f"[MENU CLICK] x={mx}, y={my}")
             if btn_iniciar.collidepoint(mx, my):
                 menu_click_btn = "iniciar"
                 menu_click_time = current_time
