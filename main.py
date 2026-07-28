@@ -1575,7 +1575,7 @@ while app_running:
                     else:
                         break
                 stats_values = [
-                    f"{int(fxp_balance)} FXP",
+                    f"{int(fxp_balance)}",
                     f"{win_rate:.0f}%",
                     f"{streak}",
                     f"{total_trades}",
