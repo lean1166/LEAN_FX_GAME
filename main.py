@@ -1900,9 +1900,17 @@ while app_running:
                     pygame.draw.line(screen, (255, 255, 255), (x, entry_y), (x + 6, entry_y), 1)
                 pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
                 pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
-                # Label "LEAN FX" para distinguir del trade de viewers
-                lf_label = font_trade.render("LEAN FX", True, (255, 200, 0))
-                screen.blit(lf_label, (line_end_x + 5, entry_y - 8))
+                # Label según quién opera - debajo SL (compra) o encima SL (venta)
+                if active_trade["type"] == "BUY":
+                    # Compra: label debajo del SL
+                    label_text = "LEAN FX - VIEWERS" if viewer_votes_display else "LEAN FX"
+                    lf_label = font_trade.render(label_text, True, (255, 200, 0))
+                    screen.blit(lf_label, (line_start_x, sl_y + 5))
+                else:
+                    # Venta: label encima del SL
+                    label_text = "LEAN FX - VIEWERS" if viewer_votes_display else "LEAN FX"
+                    lf_label = font_trade.render(label_text, True, (255, 200, 0))
+                    screen.blit(lf_label, (line_start_x, sl_y - 18))
             elif viewer_trade_active is not None:
                 tp_y = center_y - int((viewer_trade_active["tp"] - view_center_price) * vertical_zoom)
                 sl_y = center_y - int((viewer_trade_active["sl"] - view_center_price) * vertical_zoom)
@@ -1930,9 +1938,13 @@ while app_running:
                     pygame.draw.line(screen, (200, 200, 200), (x, entry_y), (x + 4, entry_y), 1)
                 pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
                 pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
-                # Label "VIEWERS" al lado
-                v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
-                screen.blit(v_label, (line_end_x + 5, entry_y - 8))
+                # Label "VIEWERS" debajo SL (compra) o encima SL (venta)
+                if viewer_trade_active["type"] == "BUY":
+                    v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
+                    screen.blit(v_label, (line_start_x, sl_y + 5))
+                else:
+                    v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
+                    screen.blit(v_label, (line_start_x, sl_y - 18))
             # (Contador de viewers ya está integrado en el panel de arriba)
         # --- FLASH AL GANAR/PERDER ---
         if flash_active:
