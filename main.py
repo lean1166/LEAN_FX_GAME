@@ -34,6 +34,7 @@ sound_loss = load_sound("LOSS.mp3")
 sound_zoom = load_sound("ZOOM.mp3")
 sound_tick = load_sound("TICK.mp3")
 sound_ambient = load_sound("AMBIENT.mp3")
+sound_game_music = load_sound("GAME_MUSIC.mp3")
 
 def play_sound(sound):
     if sound is not None and game_started:
@@ -677,6 +678,9 @@ while app_running:
                 game_started = True
                 if sound_ambient is not None:
                     sound_ambient.stop()
+                if sound_game_music is not None:
+                    sound_game_music.set_volume(0.3)
+                    sound_game_music.play(loops=-1)
             elif menu_click_btn == "ranking":
                 menu_selection = "ranking"
             elif menu_click_btn == "config":
