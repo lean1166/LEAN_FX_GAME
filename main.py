@@ -568,6 +568,7 @@ while app_running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                app_running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     # Diálogo de pausa: ¿Volver al menú o cerrar?
