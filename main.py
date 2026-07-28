@@ -79,15 +79,54 @@ if os.path.exists(PROFILE_DIR):
 if avatar_img is None:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
 
-# --- TOP 5 VIEWERS (hardcoded para pruebas) ---
+# --- TOP 5 VIEWERS (desde base de datos) ---
 font_top = pygame.font.SysFont("Arial", 14, bold=True)
-top_viewers = [
-    {"name": "crypto_wolf", "balance": 10800, "wins": 15, "losses": 3},
-    {"name": "trader_mike", "balance": 10400, "wins": 12, "losses": 5},
-    {"name": "fx_queen", "balance": 10200, "wins": 10, "losses": 8},
-    {"name": "bull_master", "balance": 9900, "wins": 8, "losses": 10},
-    {"name": "sniper_pro", "balance": 9700, "wins": 6, "losses": 12},
-]
+# Verificar reset mensual
+check_monthly_reset()
+# Crear jugadores de prueba si la DB está vacía
+db_top = get_top_players(5)
+if len(db_top) == 0:
+    test_players = ["crypto_wolf", "trader_mike", "fx_queen", "bull_master", "sniper_pro"]
+    for p in test_players:
+        create_player(p)
+    # Simular stats para pruebas
+    update_player_balance("crypto_wolf", 10800, win=True)
+    update_player_balance("trader_mike", 10400, win=True)
+    update_player_balance("fx_queen", 10200, win=True)
+    update_player_balance("bull_master", 9900, loss=True)
+    update_player_balance("sniper_pro", 9700, loss=True)
+    # Agregar más wins/losses para stats
+    for _ in range(14): update_player_balance("crypto_wolf", 10800, win=True)
+    for _ in range(2): update_player_balance("crypto_wolf", 10800, loss=True)
+    for _ in range(11): update_player_balance("trader_mike", 10400, win=True)
+    for _ in range(4): update_player_balance("trader_mike", 10400, loss=True)
+    for _ in range(9): update_player_balance("fx_queen", 10200, win=True)
+    for _ in range(7): update_player_balance("fx_queen", 10200, loss=True)
+    for _ in range(7): update_player_balance("bull_master", 9900, win=True)
+    for _ in range(9): update_player_balance("bull_master", 9900, loss=True)
+    for _ in range(5): update_player_balance("sniper_pro", 9700, win=True)
+    for _ in range(11): update_player_balance("sniper_pro", 9700, loss=True)
+
+# Cargar top viewers desde DB
+def load_top_viewers():
+    players = get_top_players(5)
+    viewers = []
+    for p in players:
+        total = p["wins"] + p["losses"]
+        viewers.append({
+            "name": p["username"],
+            "balance": p["balance"],
+            "wins": p["wins"],
+            "losses": p["losses"],
+        })
+    return viewers
+
+top_viewers = load_top_viewers()
+# Cargar stats del streamer desde DB
+streamer_data = get_streamer_stats()
+fxp_balance = streamer_data["balance"]
+wins = streamer_data["wins"]
+losses = streamer_data["losses"]
 STREAMER_NAME = "LEAN FX"
 fxp_balance = 10000
 wins = 0
