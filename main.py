@@ -1086,7 +1086,176 @@ while app_running:
                                 if ranking_scroll > 0:
                                     ranking_scroll -= 1
             elif menu_click_btn == "config":
-                menu_selection = "config"
+                # === PANTALLA DE CONFIGURACIÓN ===
+                in_config = True
+                # Cargar valores actuales
+                cfg_timer = int(get_config("timer_duration", "10000")) // 1000  # en segundos
+                cfg_risk = int(get_config("trade_risk", "100"))
+                cfg_tp_mult = float(get_config("tp_multiplier", "3.0"))
+                cfg_bot_enabled = get_config("bot_enabled", "1") == "1"
+                cfg_bot_wr = int(float(get_config("bot_win_rate", "0.70")) * 100)
+                cfg_viewers_enabled = get_config("viewers_enabled", "1") == "1"
+                cfg_vol_music = int(get_config("vol_music", "30"))
+                cfg_vol_fx = int(get_config("vol_fx", "100"))
+                # Opciones de config
+                config_options = [
+                    {"label": "Timer (segundos)", "key": "timer", "type": "number", "min": 3, "max": 30, "step": 1},
+                    {"label": "Riesgo por trade (FXP)", "key": "risk", "type": "number", "min": 50, "max": 500, "step": 50},
+                    {"label": "Ratio TP:SL", "key": "tp_mult", "type": "number", "min": 1.0, "max": 5.0, "step": 0.5},
+                    {"label": "Bot LEAN FX", "key": "bot_enabled", "type": "toggle"},
+                    {"label": "Bot Win Rate %", "key": "bot_wr", "type": "number", "min": 50, "max": 90, "step": 5},
+                    {"label": "Bots Viewers", "key": "viewers_enabled", "type": "toggle"},
+                    {"label": "Volumen Musica %", "key": "vol_music", "type": "number", "min": 0, "max": 100, "step": 10},
+                    {"label": "Volumen Efectos %", "key": "vol_fx", "type": "number", "min": 0, "max": 100, "step": 10},
+                    {"label": "RESET RANKING", "key": "reset", "type": "button"},
+                ]
+                config_selected = 0  # Índice de opción seleccionada
+                config_confirm_reset = False
+                while in_config:
+                    clock.tick(60)
+                    current_time = pygame.time.get_ticks()
+                    screen.fill((8, 12, 20))
+                    # Título
+                    font_cfg_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.05), bold=True)
+                    cfg_title = font_cfg_title.render("CONFIGURACION", True, (0, 220, 255))
+                    screen.blit(cfg_title, cfg_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.06))))
+                    # Dibujar opciones
+                    font_cfg_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
+                    font_cfg_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.024), bold=True)
+                    opt_start_y = int(SCREEN_H * 0.15)
+                    opt_h = int(SCREEN_H * 0.07)
+                    for idx, opt in enumerate(config_options):
+                        oy = opt_start_y + (idx * opt_h)
+                        # Fondo de fila (highlight si seleccionada)
+                        row_bg = pygame.Surface((int(SCREEN_W * 0.60), opt_h - 4), pygame.SRCALPHA)
+                        if idx == config_selected:
+                            row_bg.fill((0, 40, 60, 150))
+                        else:
+                            row_bg.fill((15, 18, 28, 80))
+                        row_x = SCREEN_W // 2 - int(SCREEN_W * 0.30)
+                        screen.blit(row_bg, (row_x, oy))
+                        if idx == config_selected:
+                            pygame.draw.rect(screen, (0, 180, 220), (row_x, oy, int(SCREEN_W * 0.60), opt_h - 4), 1, border_radius=3)
+                        # Label
+                        lbl = font_cfg_label.render(opt["label"], True, (200, 200, 210))
+                        screen.blit(lbl, (row_x + 15, oy + (opt_h - 4) // 2 - lbl.get_height() // 2))
+                        # Valor
+                        val_x = row_x + int(SCREEN_W * 0.40)
+                        val_cy = oy + (opt_h - 4) // 2
+                        if opt["type"] == "number":
+                            # Obtener valor actual
+                            if opt["key"] == "timer": val = cfg_timer
+                            elif opt["key"] == "risk": val = cfg_risk
+                            elif opt["key"] == "tp_mult": val = cfg_tp_mult
+                            elif opt["key"] == "bot_wr": val = cfg_bot_wr
+                            elif opt["key"] == "vol_music": val = cfg_vol_music
+                            elif opt["key"] == "vol_fx": val = cfg_vol_fx
+                            else: val = 0
+                            if opt["key"] == "tp_mult":
+                                val_str = f"1:{val:.1f}"
+                            else:
+                                val_str = str(int(val))
+                            # Flechas < >
+                            arrow_color = (0, 220, 255) if idx == config_selected else (80, 80, 100)
+                            left_arrow = font_cfg_val.render("<", True, arrow_color)
+                            right_arrow = font_cfg_val.render(">", True, arrow_color)
+                            val_txt = font_cfg_val.render(val_str, True, (255, 255, 255))
+                            screen.blit(left_arrow, (val_x, val_cy - left_arrow.get_height() // 2))
+                            screen.blit(val_txt, val_txt.get_rect(center=(val_x + 60, val_cy)))
+                            screen.blit(right_arrow, (val_x + 100, val_cy - right_arrow.get_height() // 2))
+                        elif opt["type"] == "toggle":
+                            if opt["key"] == "bot_enabled": val = cfg_bot_enabled
+                            elif opt["key"] == "viewers_enabled": val = cfg_viewers_enabled
+                            else: val = False
+                            toggle_color = (38, 166, 154) if val else (239, 83, 80)
+                            toggle_txt = font_cfg_val.render("ON" if val else "OFF", True, toggle_color)
+                            screen.blit(toggle_txt, toggle_txt.get_rect(center=(val_x + 60, val_cy)))
+                        elif opt["type"] == "button":
+                            btn_color = (239, 83, 80) if idx == config_selected else (100, 40, 40)
+                            btn_rect = pygame.Rect(val_x, val_cy - 15, 120, 30)
+                            pygame.draw.rect(screen, btn_color, btn_rect, border_radius=5)
+                            btn_txt = font_cfg_label.render("RESET", True, (255, 255, 255))
+                            screen.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
+                    # Instrucciones abajo
+                    font_cfg_hint = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015))
+                    hint_txt = font_cfg_hint.render("Flechas = Navegar | Izq/Der = Cambiar | ESC = Volver", True, (60, 80, 100))
+                    screen.blit(hint_txt, hint_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.94))))
+                    # Confirmación de reset
+                    if config_confirm_reset:
+                        confirm_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+                        confirm_overlay.fill((0, 0, 0, 180))
+                        screen.blit(confirm_overlay, (0, 0))
+                        confirm_txt = font_cfg_title.render("RESETEAR RANKING?", True, (255, 80, 80))
+                        screen.blit(confirm_txt, confirm_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                        sub_txt = font_cfg_label.render("Todos los balances vuelven a 10000 FXP", True, (200, 200, 200))
+                        screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.48))))
+                        hint2 = font_cfg_label.render("ENTER = Confirmar | ESC = Cancelar", True, (100, 150, 180))
+                        screen.blit(hint2, hint2.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.56))))
+                    pygame.display.flip()
+                    for cfg_event in pygame.event.get():
+                        if cfg_event.type == pygame.QUIT:
+                            in_config = False
+                            in_menu = False
+                            app_running = False
+                        elif cfg_event.type == pygame.KEYDOWN:
+                            if config_confirm_reset:
+                                if cfg_event.key == pygame.K_RETURN:
+                                    from database import reset_all_players
+                                    reset_all_players()
+                                    config_confirm_reset = False
+                                elif cfg_event.key == pygame.K_ESCAPE:
+                                    config_confirm_reset = False
+                            else:
+                                if cfg_event.key == pygame.K_ESCAPE:
+                                    # Guardar config y salir
+                                    from database import set_config as _set_cfg
+                                    _set_cfg("timer_duration", str(cfg_timer * 1000))
+                                    _set_cfg("trade_risk", str(cfg_risk))
+                                    _set_cfg("tp_multiplier", str(cfg_tp_mult))
+                                    _set_cfg("bot_enabled", "1" if cfg_bot_enabled else "0")
+                                    _set_cfg("bot_win_rate", str(cfg_bot_wr / 100.0))
+                                    _set_cfg("viewers_enabled", "1" if cfg_viewers_enabled else "0")
+                                    _set_cfg("vol_music", str(cfg_vol_music))
+                                    _set_cfg("vol_fx", str(cfg_vol_fx))
+                                    # Aplicar al juego
+                                    TIMER_DURATION = cfg_timer * 1000
+                                    TRADE_RISK = cfg_risk
+                                    TP_MULTIPLIER = cfg_tp_mult
+                                    BOT_ENABLED = cfg_bot_enabled
+                                    BOT_WIN_RATE = cfg_bot_wr / 100.0
+                                    VIEWER_BOTS_ENABLED = cfg_viewers_enabled
+                                    if sound_game_music is not None:
+                                        sound_game_music.set_volume(cfg_vol_music / 100.0)
+                                    in_config = False
+                                elif cfg_event.key == pygame.K_DOWN:
+                                    config_selected = (config_selected + 1) % len(config_options)
+                                elif cfg_event.key == pygame.K_UP:
+                                    config_selected = (config_selected - 1) % len(config_options)
+                                elif cfg_event.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                                    opt = config_options[config_selected]
+                                    direction = 1 if cfg_event.key == pygame.K_RIGHT else -1
+                                    if opt["type"] == "number":
+                                        if opt["key"] == "timer":
+                                            cfg_timer = max(opt["min"], min(opt["max"], cfg_timer + opt["step"] * direction))
+                                        elif opt["key"] == "risk":
+                                            cfg_risk = max(opt["min"], min(opt["max"], cfg_risk + opt["step"] * direction))
+                                        elif opt["key"] == "tp_mult":
+                                            cfg_tp_mult = max(opt["min"], min(opt["max"], cfg_tp_mult + opt["step"] * direction))
+                                        elif opt["key"] == "bot_wr":
+                                            cfg_bot_wr = max(opt["min"], min(opt["max"], cfg_bot_wr + opt["step"] * direction))
+                                        elif opt["key"] == "vol_music":
+                                            cfg_vol_music = max(opt["min"], min(opt["max"], cfg_vol_music + opt["step"] * direction))
+                                        elif opt["key"] == "vol_fx":
+                                            cfg_vol_fx = max(opt["min"], min(opt["max"], cfg_vol_fx + opt["step"] * direction))
+                                    elif opt["type"] == "toggle":
+                                        if opt["key"] == "bot_enabled":
+                                            cfg_bot_enabled = not cfg_bot_enabled
+                                        elif opt["key"] == "viewers_enabled":
+                                            cfg_viewers_enabled = not cfg_viewers_enabled
+                                elif cfg_event.key == pygame.K_RETURN:
+                                    opt = config_options[config_selected]
+                                    if opt["type"] == "button" and opt["key"] == "reset":
+                                        config_confirm_reset = True
             menu_click_btn = None
         # Áreas de botones calibradas con clicks en 1366x768
         btn_w = int(SCREEN_W * 0.28)
