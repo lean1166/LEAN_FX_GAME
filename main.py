@@ -1427,7 +1427,7 @@ while app_running:
             chart_start_x = 0
             chart_end_x = int(SCREEN_W * 0.75)
             # Velas ocupan hasta 70%
-            available_width = int(SCREEN_W * 0.70) - chart_start_x
+            available_width = int(SCREEN_W * 0.67) - chart_start_x
             spacing = available_width / max(num_visible - 1, 1)
             candle_width = max(3, int(spacing * 0.65))
             start_x = chart_start_x
@@ -1691,18 +1691,27 @@ while app_running:
                     screen.blit(n_txt, n_rect)
                     # W
                     w_val = viewer.get('wins', 0)
-                    w_txt = font_stat_top5.render(str(w_val), True, (38, 166, 154))
+                    if w_val > 0:
+                        w_txt = font_stat_top5.render(str(w_val), True, (38, 166, 154))
+                    else:
+                        w_txt = font_stat_top5.render("-", True, (100, 100, 120))
                     w_rect = w_txt.get_rect(center=(int(SCREEN_W * pos["w"][0]), int(SCREEN_H * pos["w"][1])))
                     screen.blit(w_txt, w_rect)
                     # L
                     l_val = viewer.get('losses', 0)
-                    l_txt = font_stat_top5.render(str(l_val), True, (239, 83, 80))
+                    if l_val > 0:
+                        l_txt = font_stat_top5.render(str(l_val), True, (239, 83, 80))
+                    else:
+                        l_txt = font_stat_top5.render("-", True, (100, 100, 120))
                     l_rect = l_txt.get_rect(center=(int(SCREEN_W * pos["l"][0]), int(SCREEN_H * pos["l"][1])))
                     screen.blit(l_txt, l_rect)
                     # WIN%
                     total = w_val + l_val
-                    wr_val = int((w_val / total * 100)) if total > 0 else 0
-                    wr_txt = font_stat_top5.render(f"{wr_val}%", True, (0, 220, 255))
+                    if total > 0:
+                        wr_val = int((w_val / total * 100))
+                        wr_txt = font_stat_top5.render(f"{wr_val}%", True, (0, 220, 255))
+                    else:
+                        wr_txt = font_stat_top5.render("-", True, (100, 100, 120))
                     wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * pos["wr"][0]), int(SCREEN_H * pos["wr"][1])))
                     screen.blit(wr_txt, wr_rect)
             # Botones BUY / SELL (solo durante el timer, centrados en pantalla)
