@@ -739,18 +739,38 @@ while app_running:
                     all_players = get_all_players_ranked()
                     total_txt = font_top.render(f"{len(all_players)} jugadores activos", True, (100, 150, 180))
                     screen.blit(total_txt, (int(SCREEN_W * 0.78), int(SCREEN_H * 0.04)))
+                    # Perfil LEAN FX destacado
+                    streamer_now = get_streamer_stats()
+                    st_total = streamer_now["wins"] + streamer_now["losses"]
+                    st_wr = int((streamer_now["wins"] / st_total * 100)) if st_total > 0 else 0
+                    # Fondo del perfil streamer
+                    st_bg = pygame.Surface((int(SCREEN_W * 0.50), int(SCREEN_H * 0.06)), pygame.SRCALPHA)
+                    st_bg.fill((0, 40, 60, 150))
+                    st_bg_x = SCREEN_W // 2 - int(SCREEN_W * 0.25)
+                    st_bg_y = int(SCREEN_H * 0.09)
+                    screen.blit(st_bg, (st_bg_x, st_bg_y))
+                    pygame.draw.rect(screen, (0, 180, 220), (st_bg_x, st_bg_y, int(SCREEN_W * 0.50), int(SCREEN_H * 0.06)), 1)
+                    # Avatar chico
+                    if avatar_img is not None:
+                        av_small = pygame.transform.smoothscale(avatar_img, (30, 30))
+                        screen.blit(av_small, (st_bg_x + 10, st_bg_y + 8))
+                    # Datos streamer
+                    st_name = font_hud_title.render("LEAN FX", True, (0, 220, 255))
+                    screen.blit(st_name, (st_bg_x + 50, st_bg_y + 5))
+                    st_info = font_top.render(f"Balance: ${int(streamer_now['balance'])}  |  W:{streamer_now['wins']}  L:{streamer_now['losses']}  |  WR: {st_wr}%", True, (200, 200, 200))
+                    screen.blit(st_info, (st_bg_x + 50, st_bg_y + 28))
                     # Línea separadora
-                    pygame.draw.line(screen, (0, 100, 150), (int(SCREEN_W * 0.05), int(SCREEN_H * 0.11)), (int(SCREEN_W * 0.95), int(SCREEN_H * 0.11)), 1)
+                    pygame.draw.line(screen, (0, 100, 150), (int(SCREEN_W * 0.05), int(SCREEN_H * 0.17)), (int(SCREEN_W * 0.95), int(SCREEN_H * 0.17)), 1)
                     # Headers
                     headers = ["#", "JUGADOR", "BALANCE", "W", "L", "WIN RATE"]
                     hx_positions = [0.06, 0.14, 0.38, 0.52, 0.62, 0.74]
                     for i, h in enumerate(headers):
                         h_txt = font_hud_title.render(h, True, (100, 120, 140))
-                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.13)))
+                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.19)))
                     # Dibujar filas
                     row_h = int(SCREEN_H * 0.06)
                     visible_rows = int(SCREEN_H * 0.75) // row_h
-                    start_y = int(SCREEN_H * 0.18)
+                    start_y = int(SCREEN_H * 0.24)
                     for idx in range(min(visible_rows, len(all_players) - ranking_scroll)):
                         p_idx = idx + ranking_scroll
                         if p_idx >= len(all_players):
@@ -818,9 +838,19 @@ while app_running:
                         # Texto del porcentaje
                         wr_txt = font_top.render(f"{wr}%", True, (255, 255, 255))
                         screen.blit(wr_txt, (wr_x + bar_w_wr + 8, ry + 12))
+                    # Fecha próximo reset
+                    from datetime import datetime
+                    now = datetime.now()
+                    if now.month == 12:
+                        next_month = f"1 Enero {now.year + 1}"
+                    else:
+                        months = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+                        next_month = f"1 {months[now.month + 1]} {now.year}"
+                    reset_txt = font_top.render(f"Proximo reset: {next_month}", True, (80, 100, 120))
+                    screen.blit(reset_txt, reset_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.92))))
                     # Instrucción abajo
                     back_txt = font_top.render("ESC = Volver | Flechas = Scroll", True, (80, 80, 80))
-                    screen.blit(back_txt, back_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.95))))
+                    screen.blit(back_txt, back_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.96))))
                     pygame.display.flip()
                     for r_event in pygame.event.get():
                         if r_event.type == pygame.QUIT:
