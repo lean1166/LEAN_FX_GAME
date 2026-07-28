@@ -92,11 +92,12 @@ font_top = pygame.font.SysFont("Arial", 14, bold=True)
 check_monthly_reset()
 # Crear jugadores de prueba si la DB está vacía
 db_top = get_top_players(10)
-# Si solo hay 5 (data vieja), regenerar con 10 jugadores
-if 0 < len(db_top) <= 5:
+# Siempre regenerar con datos limpios (borrar DB vieja)
+if True:
     import sqlite3 as _sq
     _conn = _sq.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lean_fx_game.db"))
     _conn.execute("DELETE FROM players WHERE username != 'LEAN FX'")
+    _conn.execute("UPDATE players SET balance = 10000, wins = 0, losses = 0 WHERE username = 'LEAN FX'")
     _conn.commit()
     _conn.close()
     db_top = []
@@ -105,38 +106,7 @@ if len(db_top) == 0:
                     "gold_trader", "scalp_king", "pip_hunter", "chart_ninja", "forex_ace"]
     for p in test_players:
         create_player(p)
-    # Simular stats para pruebas
-    update_player_balance("crypto_wolf", 10800, win=True)
-    update_player_balance("trader_mike", 10400, win=True)
-    update_player_balance("fx_queen", 10200, win=True)
-    update_player_balance("bull_master", 9900, loss=True)
-    update_player_balance("sniper_pro", 9700, loss=True)
-    update_player_balance("gold_trader", 9500, win=True)
-    update_player_balance("scalp_king", 9300, loss=True)
-    update_player_balance("pip_hunter", 9100, win=True)
-    update_player_balance("chart_ninja", 8900, loss=True)
-    update_player_balance("forex_ace", 8700, win=True)
-    # Agregar más wins/losses para stats
-    for _ in range(14): update_player_balance("crypto_wolf", 10800, win=True)
-    for _ in range(2): update_player_balance("crypto_wolf", 10800, loss=True)
-    for _ in range(11): update_player_balance("trader_mike", 10400, win=True)
-    for _ in range(4): update_player_balance("trader_mike", 10400, loss=True)
-    for _ in range(9): update_player_balance("fx_queen", 10200, win=True)
-    for _ in range(7): update_player_balance("fx_queen", 10200, loss=True)
-    for _ in range(7): update_player_balance("bull_master", 9900, win=True)
-    for _ in range(9): update_player_balance("bull_master", 9900, loss=True)
-    for _ in range(5): update_player_balance("sniper_pro", 9700, win=True)
-    for _ in range(11): update_player_balance("sniper_pro", 9700, loss=True)
-    for _ in range(8): update_player_balance("gold_trader", 9500, win=True)
-    for _ in range(5): update_player_balance("gold_trader", 9500, loss=True)
-    for _ in range(4): update_player_balance("scalp_king", 9300, win=True)
-    for _ in range(8): update_player_balance("scalp_king", 9300, loss=True)
-    for _ in range(6): update_player_balance("pip_hunter", 9100, win=True)
-    for _ in range(6): update_player_balance("pip_hunter", 9100, loss=True)
-    for _ in range(3): update_player_balance("chart_ninja", 8900, win=True)
-    for _ in range(9): update_player_balance("chart_ninja", 8900, loss=True)
-    for _ in range(7): update_player_balance("forex_ace", 8700, win=True)
-    for _ in range(4): update_player_balance("forex_ace", 8700, loss=True)
+    # Todos empiezan iguales: 10000 FXP, 0 operaciones
 
 # Cargar top viewers desde DB
 def load_top_viewers():
