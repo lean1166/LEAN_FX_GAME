@@ -534,6 +534,7 @@ while in_menu and running:
     if menu_click_btn and current_time - menu_click_time > MENU_CLICK_DURATION:
         if menu_click_btn == "iniciar":
             in_menu = False
+            game_started = True
         elif menu_click_btn == "ranking":
             menu_selection = "ranking"
         elif menu_click_btn == "config":
