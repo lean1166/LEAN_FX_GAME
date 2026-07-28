@@ -537,18 +537,14 @@ while app_running:
             "color": random.choice([(38, 166, 154), (239, 83, 80)]),
             "speed": random.uniform(0.2, 0.6),
         })
-    # Barra de luz
-    menu_light_x = 0
-    menu_light_speed = 3
-    # Líneas neón
-    menu_neon_lines = []
-    for _ in range(5):
-        menu_neon_lines.append({
-            "y": random.randint(50, SCREEN_H - 50),
-            "alpha": random.randint(0, 255),
-            "speed": random.uniform(1, 4),
-            "direction": 1,
-        })
+    # Línea de precio animada (tipo chart)
+    menu_price_points = []
+    price_val = SCREEN_H * 0.5
+    for i in range(int(SCREEN_W * 0.8)):
+        price_val += random.uniform(-2, 2)
+        price_val = max(SCREEN_H * 0.3, min(SCREEN_H * 0.7, price_val))
+        menu_price_points.append(price_val)
+    menu_price_offset = 0
 
     # --- MENÚ ---
     while in_menu and app_running:
@@ -583,26 +579,44 @@ while app_running:
             ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
             pygame.draw.circle(ps, (p["color"][0], p["color"][1], p["color"][2], p["alpha"]), (p["size"], p["size"]), p["size"])
             screen.blit(ps, (int(p["x"]), int(p["y"])))
-        # Barra de luz horizontal
-        menu_light_x += menu_light_speed
-        if menu_light_x > SCREEN_W:
-            menu_light_x = -100
-        light_surface = pygame.Surface((100, 2), pygame.SRCALPHA)
-        for lx in range(100):
-            alpha = int(150 * (1 - abs(lx - 50) / 50))
-            light_surface.set_at((lx, 0), (0, 220, 255, alpha))
-            light_surface.set_at((lx, 1), (0, 220, 255, alpha // 2))
-        screen.blit(light_surface, (int(menu_light_x), int(SCREEN_H * 0.48)))
-        # Líneas neón parpadeantes
-        for nl in menu_neon_lines:
-            nl["alpha"] += nl["speed"] * nl["direction"]
-            if nl["alpha"] >= 120:
-                nl["direction"] = -1
-            elif nl["alpha"] <= 10:
-                nl["direction"] = 1
-            neon_s = pygame.Surface((SCREEN_W, 1), pygame.SRCALPHA)
-            neon_s.fill((0, 180, 220, int(nl["alpha"])))
-            screen.blit(neon_s, (0, nl["y"]))
+        # Línea de precio animada (se mueve de derecha a izquierda)
+        menu_price_offset += 1
+        if menu_price_offset >= len(menu_price_points):
+            menu_price_offset = 0
+            # Generar nuevos puntos
+            price_val = SCREEN_H * 0.5
+            for i in range(len(menu_price_points)):
+                price_val += random.uniform(-2, 2)
+                price_val = max(SCREEN_H * 0.3, min(SCREEN_H * 0.7, price_val))
+                menu_price_points[i] = price_val
+        price_line_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        visible_points = menu_price_points[menu_price_offset:] + menu_price_points[:menu_price_offset]
+        step = max(1, len(visible_points) // SCREEN_W)
+        for i in range(1, SCREEN_W - 1):
+            idx1 = min((i - 1) * step, len(visible_points) - 1)
+            idx2 = min(i * step, len(visible_points) - 1)
+            y1 = int(visible_points[idx1])
+            y2 = int(visible_points[idx2])
+            pygame.draw.line(price_line_surface, (0, 200, 220, 40), (i - 1, y1), (i, y2), 2)
+        screen.blit(price_line_surface, (0, 0))
+        # Niebla sutil (nubes transparentes que se mueven)
+        fog_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        fog_time = current_time / 3000.0
+        for fi in range(3):
+            fog_x = int((fog_time * 20 + fi * 400) % (SCREEN_W + 300)) - 150
+            fog_y = int(SCREEN_H * (0.7 + fi * 0.08))
+            fog_w = 300 + fi * 50
+            fog_h = 40
+            for fy in range(fog_h):
+                fog_alpha = int(12 * (1 - abs(fy - fog_h // 2) / (fog_h // 2)))
+                pygame.draw.line(fog_surface, (100, 150, 180, fog_alpha), (fog_x, fog_y + fy), (fog_x + fog_w, fog_y + fy))
+        screen.blit(fog_surface, (0, 0))
+        # Glow pulsante en los bordes de los botones
+        glow_alpha = int(60 + 40 * math.sin(current_time / 500.0))
+        glow_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        for btn_r in [btn_iniciar, btn_ranking, btn_config]:
+            pygame.draw.rect(glow_surface, (0, 220, 255, glow_alpha), btn_r.inflate(6, 6), 2, border_radius=10)
+        screen.blit(glow_surface, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 # Diálogo ¿Cerrar juego?
