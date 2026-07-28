@@ -40,6 +40,7 @@ sound_zoom = load_sound("ZOOM.mp3")
 sound_tick = load_sound("TICK.mp3")
 sound_ambient = load_sound("AMBIENT.mp3")
 sound_game_music = load_sound("GAME_MUSIC.mp3")
+sound_levelup = load_sound("LEVELUP.mp3")  # Sonido cuando alguien sube en TOP 5
 
 def play_sound(sound):
     if sound is not None and game_started:
@@ -152,6 +153,36 @@ def load_top_viewers():
     return viewers
 
 top_viewers = load_top_viewers()
+# --- SISTEMA DE ANIMACIÓN TOP 5 (detectar cambios de posición) ---
+top5_prev_order = [v["name"] for v in top_viewers]  # Orden anterior
+top5_highlights = {}  # {"nombre": {"type": "up"/"down", "start_time": ms}}
+TOP5_HIGHLIGHT_DURATION = 2500  # 2.5 segundos de animación
+top5_last_refresh = 0
+TOP5_REFRESH_INTERVAL = 3000  # Refrescar cada 3 segundos
+
+def refresh_top5_with_tracking(current_time):
+    """Refresca top_viewers y detecta cambios de posición"""
+    global top_viewers, top5_prev_order, top5_highlights
+    new_viewers = load_top_viewers()
+    new_order = [v["name"] for v in new_viewers]
+    # Detectar quién subió y quién bajó
+    someone_moved_up = False
+    for name in new_order:
+        if name in top5_prev_order:
+            old_pos = top5_prev_order.index(name)
+            new_pos = new_order.index(name)
+            if new_pos < old_pos:
+                top5_highlights[name] = {"type": "up", "start_time": current_time}
+                someone_moved_up = True
+            elif new_pos > old_pos:
+                top5_highlights[name] = {"type": "down", "start_time": current_time}
+        else:
+            top5_highlights[name] = {"type": "up", "start_time": current_time}
+            someone_moved_up = True
+    if someone_moved_up and sound_levelup is not None and game_started:
+        sound_levelup.play()
+    top5_prev_order = new_order
+    top_viewers = new_viewers
 # Cargar stats del streamer desde DB
 streamer_data = get_streamer_stats()
 fxp_balance = streamer_data["balance"]
@@ -1591,6 +1622,10 @@ while app_running:
                     s_rect = s_txt.get_rect(center=(sx, sy))
                     screen.blit(s_txt, s_rect)
             # --- TOP 5 VIEWERS (imagen PNG + texto calibrado con cursor) ---
+            # Refrescar TOP 5 periódicamente y detectar cambios
+            if current_time - top5_last_refresh > TOP5_REFRESH_INTERVAL:
+                refresh_top5_with_tracking(current_time)
+                top5_last_refresh = current_time
             top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
             if not os.path.exists(top_panel_path):
                 top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.jpg")
@@ -1623,6 +1658,46 @@ while app_running:
                 font_stat_top5 = pygame.font.SysFont("Arial", max(12, int(SCREEN_H * 0.020)), bold=True)
                 for i, viewer in enumerate(top_viewers):
                     pos = card_positions[i]
+                    # --- EFECTO DE CAMBIO DE POSICIÓN ---
+                    viewer_name = viewer['name']
+                    highlight_info = top5_highlights.get(viewer_name)
+                    if highlight_info:
+                        h_elapsed = current_time - highlight_info["start_time"]
+                        if h_elapsed > TOP5_HIGHLIGHT_DURATION:
+                            del top5_highlights[viewer_name]
+                            highlight_info = None
+                    # Dibujar borde brillante si hay highlight activo
+                    if highlight_info:
+                        h_elapsed = current_time - highlight_info["start_time"]
+                        h_alpha = max(0, 1.0 - (h_elapsed / TOP5_HIGHLIGHT_DURATION))
+                        # Calcular posición de la cajita para este viewer
+                        card_cy = int(SCREEN_H * pos["name"][1])
+                        card_h = int(SCREEN_H * 0.09)
+                        card_x = panel_x + int(panel_w * 0.02)
+                        card_w = int(panel_w * 0.96)
+                        card_top = card_cy - card_h // 2
+                        if highlight_info["type"] == "up":
+                            # Borde verde brillante pulsante
+                            glow_intensity = int(200 * h_alpha * (0.5 + 0.5 * math.sin(current_time / 150.0)))
+                            border_color = (0, min(255, glow_intensity + 50), 0)
+                            pygame.draw.rect(screen, border_color, (card_x, card_top, card_w, card_h), 2, border_radius=4)
+                            # Flechita ↑ verde
+                            arrow_x = int(SCREEN_W * pos["name"][0]) + 60
+                            arrow_y = int(SCREEN_H * pos["name"][1])
+                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
+                            arrow_txt = arrow_font.render("^", True, (0, int(255 * h_alpha), 0))
+                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, arrow_y)))
+                        elif highlight_info["type"] == "down":
+                            # Borde rojo sutil
+                            glow_intensity = int(150 * h_alpha)
+                            border_color = (min(255, glow_intensity + 80), 0, 0)
+                            pygame.draw.rect(screen, border_color, (card_x, card_top, card_w, card_h), 2, border_radius=4)
+                            # Flechita ↓ roja
+                            arrow_x = int(SCREEN_W * pos["name"][0]) + 60
+                            arrow_y = int(SCREEN_H * pos["name"][1])
+                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
+                            arrow_txt = arrow_font.render("v", True, (int(255 * h_alpha), 0, 0))
+                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, arrow_y)))
                     # Nombre
                     nx = int(SCREEN_W * pos["name"][0])
                     ny = int(SCREEN_H * pos["name"][1])
