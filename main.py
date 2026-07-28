@@ -154,18 +154,37 @@ STREAMER_NAME = "LEAN FX"
 candles = []
 price = 1000
 trend_dir = random.choice([-1, 1])
-trend_length = random.randint(15, 30)
+# Generador de mercado realista: impulsos + retrocesos variados
+is_impulse = True  # Empieza con impulso
+trend_length = random.randint(8, 15)
 trend_count = 0
+trend_strength = random.uniform(4, 10)  # Fuerza del movimiento
 for _ in range(180):
     trend_count += 1
     if trend_count >= trend_length:
         trend_dir *= -1
-        trend_length = random.randint(15, 30)
         trend_count = 0
-    if random.random() < 0.75:
-        body = random.uniform(3, 10) * trend_dir
+        is_impulse = not is_impulse
+        if is_impulse:
+            # Impulso: 8-15 velas, puede ser fuerte o moderado
+            trend_length = random.randint(8, 15)
+            trend_strength = random.uniform(4, 12)
+        else:
+            # Retroceso: variado, a veces suave (más velas, menos fuerza) a veces fuerte (pocas velas, mucha fuerza)
+            if random.random() < 0.4:
+                # Retroceso fuerte y rápido
+                trend_length = random.randint(4, 8)
+                trend_strength = random.uniform(6, 11)
+            else:
+                # Retroceso suave y largo
+                trend_length = random.randint(8, 14)
+                trend_strength = random.uniform(2, 6)
+    # Generar vela
+    if random.random() < 0.80:
+        body = random.uniform(trend_strength * 0.3, trend_strength) * trend_dir
     else:
-        body = random.uniform(2, 6) * -trend_dir
+        # Vela contra-tendencia (ruido)
+        body = random.uniform(1, trend_strength * 0.5) * -trend_dir
     open_p = price
     close_p = open_p + body
     high_p = max(open_p, close_p) + random.uniform(0.5, 3)
@@ -529,18 +548,30 @@ while len(bos_markers) < 2:
     candles.clear()
     price = 1000
     trend_dir = random.choice([-1, 1])
-    trend_length = random.randint(8, 16)
+    is_impulse = True
+    trend_length = random.randint(8, 15)
     trend_count = 0
+    trend_strength = random.uniform(4, 10)
     for _ in range(180):
         trend_count += 1
         if trend_count >= trend_length:
             trend_dir *= -1
-            trend_length = random.randint(8, 16)
             trend_count = 0
-        if random.random() < 0.75:
-            body = random.uniform(3, 10) * trend_dir
+            is_impulse = not is_impulse
+            if is_impulse:
+                trend_length = random.randint(8, 15)
+                trend_strength = random.uniform(4, 12)
+            else:
+                if random.random() < 0.4:
+                    trend_length = random.randint(4, 8)
+                    trend_strength = random.uniform(6, 11)
+                else:
+                    trend_length = random.randint(8, 14)
+                    trend_strength = random.uniform(2, 6)
+        if random.random() < 0.80:
+            body = random.uniform(trend_strength * 0.3, trend_strength) * trend_dir
         else:
-            body = random.uniform(2, 6) * -trend_dir
+            body = random.uniform(1, trend_strength * 0.5) * -trend_dir
         open_p = price
         close_p = open_p + body
         high_p = max(open_p, close_p) + random.uniform(0.5, 3)
