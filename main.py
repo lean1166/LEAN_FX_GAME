@@ -35,8 +35,10 @@ sound_zoom = load_sound("ZOOM.mp3")
 sound_tick = load_sound("TICK.mp3")
 
 def play_sound(sound):
-    if sound is not None:
+    if sound is not None and game_started:
         sound.play()
+
+game_started = False  # Se activa al presionar INICIAR
 
 def trade_win(amount):
     """Llamar cuando se gana un trade. Suma al balance y reproduce WIN.mp3"""
