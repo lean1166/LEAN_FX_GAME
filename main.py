@@ -15,7 +15,7 @@ try:
     display_info = pygame.display.Info()
     SCREEN_W = display_info.current_w
     SCREEN_H = display_info.current_h
-    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.NOFRAME)
     pygame.display.set_caption("LEAN FX LIVE")
 except Exception as e:
     print("[ERROR GRAFICO]:", e)
