@@ -1165,40 +1165,6 @@ while app_running:
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 print(f"[CLICK] x={mx}, y={my}")
-                # Solo se puede clickear BUY/SELL durante el timer y si no hay trade activo
-                if zone_frozen and not trade_decided and active_trade is None:
-                    btn_x = int(SCREEN_W * 0.50) - 130
-                    btn_y = int(SCREEN_H * 0.05)
-                    buy_rect = pygame.Rect(btn_x, btn_y, 120, 45)
-                    sell_rect = pygame.Rect(btn_x + 140, btn_y, 120, 45)
-                    if buy_rect.collidepoint(mx, my):
-                        entry_price = current_candle["close"]
-                        sl_price = zone_detected["low"] - SL_BUFFER  # SL debajo de la zona + respiro
-                        sl_distance = entry_price - sl_price
-                        tp_distance = sl_distance * TP_MULTIPLIER
-                        active_trade = {
-                            "type": "BUY",
-                            "entry": entry_price,
-                            "sl": sl_price,
-                            "tp": entry_price + tp_distance,
-                            "entry_index": len(candles),
-                        }
-                        trade_decided = True
-                        play_sound(sound_bos)
-                    elif sell_rect.collidepoint(mx, my):
-                        entry_price = current_candle["close"]
-                        sl_price = zone_detected["high"] + SL_BUFFER  # SL encima de la zona + respiro
-                        sl_distance = sl_price - entry_price
-                        tp_distance = sl_distance * TP_MULTIPLIER
-                        active_trade = {
-                            "type": "SELL",
-                            "entry": entry_price,
-                            "sl": sl_price,
-                            "tp": entry_price - tp_distance,
-                            "entry_index": len(candles),
-                        }
-                        trade_decided = True
-                        play_sound(sound_bos)
         # --- LOGICA DEL TIMER ---
         if zone_frozen:
             elapsed = current_time - zone_timer_start
@@ -1783,20 +1749,11 @@ while app_running:
                         wr_txt = font_stat_top5.render("-", True, (100, 100, 120))
                     wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * pos["wr"][0]), int(SCREEN_H * pos["wr"][1])))
                     screen.blit(wr_txt, wr_rect)
-            # Botones BUY / SELL (solo durante el timer, centrados en pantalla)
-            btn_x = int(SCREEN_W * 0.50) - 130
-            btn_y = int(SCREEN_H * 0.05)
-            buy_rect = pygame.Rect(btn_x, btn_y, 120, 45)
-            sell_rect = pygame.Rect(btn_x + 140, btn_y, 120, 45)
-            if zone_frozen and not trade_decided and active_trade is None:
-                # Timer activo, mostrar botones
-                pygame.draw.rect(screen, (38, 166, 154), buy_rect, border_radius=6)
-                pygame.draw.rect(screen, (239, 83, 80), sell_rect, border_radius=6)
-                buy_txt = font_btn.render("BUY", True, (255, 255, 255))
-                sell_txt = font_btn.render("SELL", True, (255, 255, 255))
-                screen.blit(buy_txt, buy_txt.get_rect(center=buy_rect.center))
-                screen.blit(sell_txt, sell_txt.get_rect(center=sell_rect.center))
-                # Mostrar TIMER grande en el centro del gráfico
+            # --- PANEL VIEWERS (arriba centro, donde estaban los botones) ---
+            btn_x = int(SCREEN_W * 0.35)
+            btn_y = int(SCREEN_H * 0.03)
+            if zone_frozen:
+                # Timer activo - mostrar panel de votación
                 elapsed = current_time - zone_timer_start
                 remaining = max(0, TIMER_DURATION - elapsed)
                 seconds_left = remaining / 1000.0
@@ -1805,18 +1762,21 @@ while app_running:
                 if seconds_left <= 5.0 and current_second != last_tick_second and seconds_left > 0:
                     play_sound(sound_tick)
                     last_tick_second = current_second
+                # Texto "ZONA DETECTADA"
+                zone_label = font_btn.render("ZONA DETECTADA", True, (255, 255, 0))
+                zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.03)))
+                screen.blit(zone_label, zone_rect)
+                # Timer
                 timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
-                timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.08)))
+                timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.08)))
                 screen.blit(timer_txt, timer_rect)
                 # Barra de progreso del timer
                 bar_w = int(SCREEN_W * 0.25)
                 bar_h = 12
-                bar_x = int(SCREEN_W * 0.20) - bar_w // 2
-                bar_y = int(SCREEN_H * 0.13)
+                bar_x = int(SCREEN_W * 0.35) - bar_w // 2
+                bar_y = int(SCREEN_H * 0.12)
                 progress = remaining / TIMER_DURATION
-                # Fondo de la barra (gris oscuro)
                 pygame.draw.rect(screen, (40, 40, 40), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
-                # Barra que se vacía (cambia de color: cyan → amarillo → rojo)
                 if progress > 0.5:
                     bar_color = (0, 220, 255)
                 elif progress > 0.25:
@@ -1826,31 +1786,32 @@ while app_running:
                 fill_w = int(bar_w * progress)
                 if fill_w > 0:
                     pygame.draw.rect(screen, bar_color, (bar_x, bar_y, fill_w, bar_h), border_radius=6)
-                # Borde de la barra
                 pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_w, bar_h), 1, border_radius=6)
-                # Texto "ZONA DETECTADA" arriba de todo
-                zone_label = font_btn.render("ZONA DETECTADA - DECIDE!", True, (255, 255, 0))
-                zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.20), int(SCREEN_H * 0.03)))
-                screen.blit(zone_label, zone_rect)
+                # Cuadrito VIEWERS con votos (en la posición de los botones)
+                if viewer_votes:
+                    buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
+                    sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
+                    vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                    vbox_x = int(SCREEN_W * 0.35) - int(SCREEN_W * 0.10)
+                    vbox_y = int(SCREEN_H * 0.15)
+                    vbox_w = int(SCREEN_W * 0.20)
+                    vbox_h = int(SCREEN_H * 0.05)
+                    vote_bg = pygame.Surface((vbox_w, vbox_h), pygame.SRCALPHA)
+                    vote_bg.fill((10, 10, 20, 210))
+                    screen.blit(vote_bg, (vbox_x, vbox_y))
+                    pygame.draw.rect(screen, (0, 150, 180), (vbox_x, vbox_y, vbox_w, vbox_h), 1, border_radius=3)
+                    vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
+                    screen.blit(vw_txt, (vbox_x + 5, vbox_y + 3))
+                    buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
+                    sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
+                    screen.blit(buy_txt, (vbox_x + 5, vbox_y + int(SCREEN_H * 0.025)))
+                    screen.blit(sell_txt, (vbox_x + int(SCREEN_W * 0.10), vbox_y + int(SCREEN_H * 0.025)))
             elif active_trade is not None:
-                # Iluminar el botón que se eligió
-                if active_trade["type"] == "BUY":
-                    pygame.draw.rect(screen, (20, 200, 120), buy_rect, border_radius=6)  # Verde brillante
-                    pygame.draw.rect(screen, (50, 50, 50), sell_rect, border_radius=6)
-                    buy_txt = font_btn.render("BUY", True, (255, 255, 255))
-                    sell_txt = font_btn.render("SELL", True, (100, 100, 100))
-                else:
-                    pygame.draw.rect(screen, (50, 50, 50), buy_rect, border_radius=6)
-                    pygame.draw.rect(screen, (220, 50, 50), sell_rect, border_radius=6)  # Rojo brillante
-                    buy_txt = font_btn.render("BUY", True, (100, 100, 100))
-                    sell_txt = font_btn.render("SELL", True, (255, 255, 255))
-                screen.blit(buy_txt, buy_txt.get_rect(center=buy_rect.center))
-                screen.blit(sell_txt, sell_txt.get_rect(center=sell_rect.center))
-                # Info del trade a la izquierda (solo tipo + PnL grande)
+                # LEAN FX operando - mostrar info del trade
                 info_x = int(SCREEN_W * 0.05)
                 info_y = int(SCREEN_H * 0.03)
                 trade_color = (38, 166, 154) if active_trade["type"] == "BUY" else (239, 83, 80)
-                trade_txt = font_hud_val.render(active_trade["type"], True, trade_color)
+                trade_txt = font_hud_val.render(f"LEAN FX: {active_trade['type']}", True, trade_color)
                 screen.blit(trade_txt, (info_x, info_y))
                 # PnL grande
                 current_price = current_candle["close"]
@@ -1862,6 +1823,26 @@ while app_running:
                 pnl_pct = (pnl_points / active_trade["entry"]) * 100
                 pnl_txt = font_timer.render(f"{pnl_pct:+.1f}%", True, pnl_color)
                 screen.blit(pnl_txt, (info_x, info_y + 25))
+            elif viewer_trade_active is not None:
+                # Viewers operando - mostrar cuadrito
+                info_x = int(SCREEN_W * 0.05)
+                info_y = int(SCREEN_H * 0.03)
+                if viewer_votes:
+                    buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
+                    sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
+                    vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                    vbox_w = int(SCREEN_W * 0.20)
+                    vbox_h = int(SCREEN_H * 0.05)
+                    vote_bg = pygame.Surface((vbox_w, vbox_h), pygame.SRCALPHA)
+                    vote_bg.fill((10, 10, 20, 210))
+                    screen.blit(vote_bg, (info_x, info_y))
+                    pygame.draw.rect(screen, (0, 150, 180), (info_x, info_y, vbox_w, vbox_h), 1, border_radius=3)
+                    vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
+                    screen.blit(vw_txt, (info_x + 5, info_y + 3))
+                    buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
+                    sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
+                    screen.blit(buy_txt, (info_x + 5, info_y + int(SCREEN_H * 0.025)))
+                    screen.blit(sell_txt, (info_x + int(SCREEN_W * 0.10), info_y + int(SCREEN_H * 0.025)))
             # --- DIBUJAR TP/SL EN EL GRAFICO ---
             # Trade del streamer (EXTREMO)
             if active_trade is not None:
@@ -1891,7 +1872,9 @@ while app_running:
                     pygame.draw.line(screen, (255, 255, 255), (x, entry_y), (x + 6, entry_y), 1)
                 pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
                 pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
-            # Trade de VIEWERS (cuando el streamer no opera)
+                # Label "LEAN FX" para distinguir del trade de viewers
+                lf_label = font_trade.render("LEAN FX", True, (255, 200, 0))
+                screen.blit(lf_label, (line_end_x + 5, entry_y - 8))
             elif viewer_trade_active is not None:
                 tp_y = center_y - int((viewer_trade_active["tp"] - view_center_price) * vertical_zoom)
                 sl_y = center_y - int((viewer_trade_active["sl"] - view_center_price) * vertical_zoom)
@@ -1922,29 +1905,7 @@ while app_running:
                 # Label "VIEWERS" al lado
                 v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
                 screen.blit(v_label, (line_end_x + 5, entry_y - 8))
-            # --- CONTADOR DE VOTOS (posición fija abajo-izquierda) ---
-            if viewer_votes and (viewer_trade_active is not None or zone_frozen):
-                buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
-                sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
-                vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.017), bold=True)
-                # Posición fija abajo-izquierda
-                vote_x = int(SCREEN_W * 0.02)
-                vote_y = int(SCREEN_H * 0.88)
-                # Fondo oscuro con borde
-                vote_w = int(SCREEN_W * 0.16)
-                vote_h = int(SCREEN_H * 0.055)
-                vote_bg = pygame.Surface((vote_w, vote_h), pygame.SRCALPHA)
-                vote_bg.fill((10, 10, 20, 210))
-                screen.blit(vote_bg, (vote_x, vote_y))
-                pygame.draw.rect(screen, (0, 150, 180), (vote_x, vote_y, vote_w, vote_h), 1, border_radius=3)
-                # Label VIEWERS
-                vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
-                screen.blit(vw_txt, (vote_x + 5, vote_y + 3))
-                # BUY / SELL
-                buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
-                sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
-                screen.blit(buy_txt, (vote_x + 5, vote_y + int(SCREEN_H * 0.025)))
-                screen.blit(sell_txt, (vote_x + int(SCREEN_W * 0.08), vote_y + int(SCREEN_H * 0.025)))
+            # (Contador de viewers ya está integrado en el panel de arriba)
         # --- FLASH AL GANAR/PERDER ---
         if flash_active:
             flash_elapsed = current_time - flash_start_time
