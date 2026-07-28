@@ -10,7 +10,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lean_fx_game
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -182,7 +182,7 @@ def reset_all_players():
     c = conn.cursor()
     c.execute("UPDATE players SET balance = 10000, wins = 0, losses = 0")
     c.execute("INSERT INTO resets (reason) VALUES (?)", ("Reset mensual",))
-    set_config("last_reset", datetime.now().strftime("%Y-%m"))
+    c.execute("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", ("last_reset", datetime.now().strftime("%Y-%m")))
     conn.commit()
     conn.close()
 
