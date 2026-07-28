@@ -183,7 +183,7 @@ current_candle = {"open": candles[-1]["close"], "close": candles[-1]["close"], "
 buttons_active = False
 zone_time_left = 0.0
 active_trade = None
-TRADE_RISK = 100  # Siempre pierdes $100, sin importar el tamaño del SL
+TRADE_RISK = 100  # Siempre pierdes 100 FXP, sin importar el tamaño del SL
 TP_MULTIPLIER = 3.0  # Risk:Reward 1:3
 SL_BUFFER = 3.0  # Pips de respiro para el SL (justo debajo de la zona)
 TIMER_DURATION = 10000  # 10 segundos en ms (temporal para pruebas)
@@ -791,6 +791,21 @@ while app_running:
                     all_players = get_all_players_ranked()
                     total_txt = font_top.render(f"{len(all_players)} jugadores activos", True, (0, 180, 200))
                     screen.blit(total_txt, (int(SCREEN_W * 0.80), int(SCREEN_H * 0.04)))
+                    # --- INDICADOR EN VIVO (puntito verde pulsante) ---
+                    live_x = int(SCREEN_W * 0.03)
+                    live_y = int(SCREEN_H * 0.04)
+                    live_pulse = int(6 + 3 * math.sin(current_time / 300.0))
+                    live_alpha = int(180 + 75 * math.sin(current_time / 300.0))
+                    # Glow del punto
+                    live_glow = pygame.Surface((live_pulse * 4, live_pulse * 4), pygame.SRCALPHA)
+                    pygame.draw.circle(live_glow, (0, 255, 80, 40), (live_pulse * 2, live_pulse * 2), live_pulse * 2)
+                    screen.blit(live_glow, (live_x - live_pulse * 2, live_y - live_pulse * 2))
+                    # Punto principal
+                    pygame.draw.circle(screen, (0, min(255, live_alpha + 50), 80), (live_x, live_y), live_pulse)
+                    # Texto "EN VIVO"
+                    font_live = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
+                    live_txt = font_live.render("EN VIVO", True, (0, 220, 100))
+                    screen.blit(live_txt, (live_x + 12, live_y - live_txt.get_height() // 2))
                     # --- PANEL STREAMER MEJORADO ---
                     streamer_now = get_streamer_stats()
                     st_total = streamer_now["wins"] + streamer_now["losses"]
@@ -821,9 +836,11 @@ while app_running:
                     font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
                     st_name = font_st_name.render("LEAN FX", True, (0, 220, 255))
                     screen.blit(st_name, (st_bg_x + info_offset, st_bg_y + int(st_panel_h * 0.15)))
-                    # Stats en una línea
+                    # Stats en una línea + PROFIT
                     font_st_info = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
-                    st_info = font_st_info.render(f"Balance: ${int(streamer_now['balance'])}  |  W:{streamer_now['wins']}  L:{streamer_now['losses']}  |  WR: {st_wr}%", True, (180, 200, 210))
+                    st_profit_pct = ((streamer_now['balance'] - 10000) / 10000) * 100
+                    st_profit_str = f"+{st_profit_pct:.1f}%" if st_profit_pct >= 0 else f"{st_profit_pct:.1f}%"
+                    st_info = font_st_info.render(f"Balance: {int(streamer_now['balance'])} FXP  |  {st_profit_str}  |  W:{streamer_now['wins']}  L:{streamer_now['losses']}  |  WR: {st_wr}%", True, (180, 200, 210))
                     screen.blit(st_info, (st_bg_x + info_offset, st_bg_y + int(st_panel_h * 0.55)))
                     # --- LINEA SEPARADORA con gradiente ---
                     sep_y = int(SCREEN_H * 0.20)
@@ -834,12 +851,21 @@ while app_running:
                         pygame.draw.line(sep_surface, (0, 180, 220, alpha), (sx, 0), (sx, 1))
                     screen.blit(sep_surface, (int(SCREEN_W * 0.05), sep_y))
                     # Headers
-                    headers = ["#", "JUGADOR", "BALANCE", "PROFIT", "W", "L", "WIN RATE"]
+                    headers = ["#", "JUGADOR", "BALANCE (FXP)", "PROFIT", "W", "L", "WIN RATE"]
                     hx_positions = [0.05, 0.10, 0.30, 0.42, 0.52, 0.59, 0.67]
                     font_header = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
+                    header_y = int(SCREEN_H * 0.22)
                     for i, h in enumerate(headers):
-                        h_txt = font_header.render(h, True, (80, 120, 150))
-                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), int(SCREEN_H * 0.22)))
+                        h_txt = font_header.render(h, True, (120, 160, 180))
+                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), header_y))
+                    # Underline debajo de headers
+                    underline_y = header_y + int(SCREEN_H * 0.022)
+                    underline_surf = pygame.Surface((int(SCREEN_W * 0.92), 1), pygame.SRCALPHA)
+                    for ux in range(int(SCREEN_W * 0.92)):
+                        dist = abs(ux - int(SCREEN_W * 0.46)) / (SCREEN_W * 0.46)
+                        alpha = int(100 * (1 - dist))
+                        pygame.draw.line(underline_surf, (0, 150, 180, alpha), (ux, 0), (ux, 0))
+                    screen.blit(underline_surf, (int(SCREEN_W * 0.04), underline_y))
                     # --- BARRA LATERAL DECORATIVA CYAN con glow ---
                     bar_deco_x = int(SCREEN_W * 0.035)
                     bar_deco_y1 = int(SCREEN_H * 0.25)
@@ -873,6 +899,8 @@ while app_running:
                         row_width = int(SCREEN_W * 0.92)
                         # Fondo de fila
                         row_bg = pygame.Surface((row_width, row_h - 3), pygame.SRCALPHA)
+                        # Degradado de opacidad: filas más abajo se ven más tenues
+                        fade_factor = max(0.4, 1.0 - (p_idx * 0.06)) if p_idx >= 3 else 1.0
                         if p_idx == 0:
                             for ry_line in range(row_h - 3):
                                 g_alpha = int(row_alpha_factor * (70 + 40 * (ry_line / (row_h - 3))))
@@ -882,9 +910,9 @@ while app_running:
                         elif p_idx == 2:
                             row_bg.fill((35, 25, 15, int(row_alpha_factor * 90)))
                         elif idx % 2 == 0:
-                            row_bg.fill((18, 22, 35, int(row_alpha_factor * 100)))
+                            row_bg.fill((18, 22, 35, int(row_alpha_factor * 100 * fade_factor)))
                         else:
-                            row_bg.fill((12, 15, 25, int(row_alpha_factor * 70)))
+                            row_bg.fill((12, 15, 25, int(row_alpha_factor * 70 * fade_factor)))
                         screen.blit(row_bg, (row_x_base, ry))
                         # --- HIGHLIGHT #1: borde dorado completo + brillo ---
                         if p_idx == 0:
@@ -924,14 +952,23 @@ while app_running:
                             num_txt = num_font.render(str(p_idx + 1), True, (140, 140, 160))
                             screen.blit(num_txt, num_txt.get_rect(center=(medal_cx, medal_cy)))
                         # Nombre
-                        name_color = (255, 255, 255) if p_idx < 3 else (200, 200, 210)
+                        if p_idx < 3:
+                            name_color = (255, 255, 255)
+                        else:
+                            nc = int(200 * fade_factor)
+                            name_color = (nc, nc, min(255, nc + 10))
                         name_txt = font_row_name.render(p["username"], True, name_color)
                         screen.blit(name_txt, (int(SCREEN_W * hx_positions[1]) + slide_offset, ry + (row_h - 3) // 2 - name_txt.get_height() // 2))
-                        # Balance
-                        bal_color = (0, 220, 255) if p_idx < 3 else (0, 180, 200)
-                        bal_txt = font_row_name.render(f"${int(p['balance'])}", True, bal_color)
+                        # Balance (gris para los que están en negativo)
+                        if p['balance'] < 10000:
+                            bal_color = (140, 140, 150)
+                        elif p_idx < 3:
+                            bal_color = (0, 220, 255)
+                        else:
+                            bal_color = (0, int(180 * fade_factor), int(200 * fade_factor))
+                        bal_txt = font_row_name.render(f"{int(p['balance'])} FXP", True, bal_color)
                         screen.blit(bal_txt, (int(SCREEN_W * hx_positions[2]) + slide_offset, ry + (row_h - 3) // 2 - bal_txt.get_height() // 2))
-                        # PROFIT (% desde $10,000)
+                        # PROFIT (% desde 10,000 FXP iniciales)
                         profit_pct = ((p['balance'] - 10000) / 10000) * 100
                         if profit_pct >= 0:
                             profit_color = (38, 200, 154)
@@ -1538,7 +1575,7 @@ while app_running:
                     else:
                         break
                 stats_values = [
-                    f"{int(fxp_balance)}",
+                    f"{int(fxp_balance)} FXP",
                     f"{win_rate:.0f}%",
                     f"{streak}",
                     f"{total_trades}",
