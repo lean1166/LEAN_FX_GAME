@@ -210,8 +210,12 @@ bot_bias_active = False  # True cuando el precio tiene sesgo a favor del bot
 bot_bias_direction = 0  # 1 = arriba, -1 = abajo
 # --- BOTS SIMULADOS (viewers falsos que operan para testear el ranking) ---
 VIEWER_BOTS_ENABLED = True  # Poner False para desactivar
-VIEWER_BOT_INTERVAL = 8000  # Cada 8 segundos un viewer opera
+VIEWER_BOT_INTERVAL = 8000  # (ya no se usa, operan en zona)
 viewer_bot_last_time = 0
+# --- SISTEMA DE VOTOS DE VIEWERS ---
+viewer_votes = []  # Lista de {"name": str, "vote": "BUY"/"SELL"} votos pendientes
+viewer_trade_active = None  # Trade activo de viewers: {"type", "entry", "sl", "tp", "entry_index"}
+viewer_trade_is_extremo = False  # Si la zona actual es EXTREMO (streamer también opera)
 running = True
 clock = pygame.time.Clock()
 CANDLE_DURATION = 1000
@@ -1306,37 +1310,71 @@ while app_running:
                             zone_timer_start = current_time
                             zone_detected = {"high": active_fvg["high"], "low": active_fvg["low"], "type": active_fvg["type"]}
                             zones_mitigated.add(zone_id)
-        # --- BOTS VIEWERS SIMULADOS (solo operan durante la ventana de decisión) ---
-        # Simulan que los viewers votan BUY/SELL cuando aparece la zona
+        # --- BOTS VIEWERS (votan durante la ventana, se resuelven con TP/SL) ---
         if VIEWER_BOTS_ENABLED and game_started and zone_frozen and not getattr(pygame, '_viewers_voted_this_zone', False):
-            # Solo votan una vez por zona (cuando se congela)
             pygame._viewers_voted_this_zone = True
-            # Entre 2 y 4 viewers operan por zona
             num_voters = random.randint(2, 4)
             all_viewer_names = [v["name"] for v in load_top_viewers()]
             if all_viewer_names:
                 voters = random.sample(all_viewer_names, min(num_voters, len(all_viewer_names)))
+                viewer_votes = []
                 for chosen in voters:
-                    # Los que eligen correctamente ganan, los que no pierden
-                    # 55% acierta la dirección
-                    if random.random() < 0.55:
-                        gain = random.randint(80, 250)
-                        p = get_top_players(10)
-                        for pl in p:
-                            if pl["username"] == chosen:
-                                update_player_balance(chosen, pl["balance"] + gain, win=True)
-                                break
+                    vote = random.choice(["BUY", "SELL"])
+                    viewer_votes.append({"name": chosen, "vote": vote})
+                # Crear trade de viewers si no hay uno activo
+                if zone_detected is not None and viewer_trade_active is None:
+                    entry_price = current_candle["close"]
+                    current_zone_id = list(zones_mitigated)[-1] if zones_mitigated else ""
+                    viewer_trade_is_extremo = current_zone_id.startswith("ob_")
+                    if zone_detected["type"] == "ALCISTA":
+                        sl_price = zone_detected["low"] - SL_BUFFER
+                        sl_distance = entry_price - sl_price
+                        tp_distance = sl_distance * TP_MULTIPLIER
+                        viewer_trade_active = {
+                            "type": "BUY", "entry": entry_price,
+                            "sl": sl_price, "tp": entry_price + tp_distance,
+                            "entry_index": len(candles),
+                        }
                     else:
-                        loss_amt = random.randint(60, 150)
-                        p = get_top_players(10)
-                        for pl in p:
-                            if pl["username"] == chosen:
-                                new_bal = max(8000, pl["balance"] - loss_amt)
-                                update_player_balance(chosen, new_bal, loss=True)
-                                break
-        # Resetear flag cuando se descongela
+                        sl_price = zone_detected["high"] + SL_BUFFER
+                        sl_distance = sl_price - entry_price
+                        tp_distance = sl_distance * TP_MULTIPLIER
+                        viewer_trade_active = {
+                            "type": "SELL", "entry": entry_price,
+                            "sl": sl_price, "tp": entry_price - tp_distance,
+                            "entry_index": len(candles),
+                        }
         if not zone_frozen:
             pygame._viewers_voted_this_zone = False
+        # --- RESOLVER TRADE DE VIEWERS (cuando precio toca TP/SL) ---
+        if viewer_trade_active is not None and not zone_frozen:
+            vt_price = current_candle["close"]
+            vt_won = False
+            vt_lost = False
+            if viewer_trade_active["type"] == "BUY":
+                if vt_price >= viewer_trade_active["tp"]:
+                    vt_won = True
+                elif vt_price <= viewer_trade_active["sl"]:
+                    vt_lost = True
+            else:
+                if vt_price <= viewer_trade_active["tp"]:
+                    vt_won = True
+                elif vt_price >= viewer_trade_active["sl"]:
+                    vt_lost = True
+            if vt_won or vt_lost:
+                correct_dir = viewer_trade_active["type"]
+                for v in viewer_votes:
+                    p = get_top_players(10)
+                    for pl in p:
+                        if pl["username"] == v["name"]:
+                            if (vt_won and v["vote"] == correct_dir) or (vt_lost and v["vote"] != correct_dir):
+                                gain = int(TRADE_RISK * TP_MULTIPLIER)
+                                update_player_balance(v["name"], pl["balance"] + gain, win=True)
+                            else:
+                                update_player_balance(v["name"], max(8000, pl["balance"] - TRADE_RISK), loss=True)
+                            break
+                viewer_trade_active = None
+                viewer_votes = []
         if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
             candles.append(current_candle.copy())
             if len(candles) > 1000:
@@ -1794,41 +1832,81 @@ while app_running:
                 pnl_txt = font_timer.render(f"{pnl_pct:+.1f}%", True, pnl_color)
                 screen.blit(pnl_txt, (info_x, info_y + 25))
             # --- DIBUJAR TP/SL EN EL GRAFICO ---
+            # Trade del streamer (EXTREMO)
             if active_trade is not None:
                 tp_y = center_y - int((active_trade["tp"] - view_center_price) * vertical_zoom)
                 sl_y = center_y - int((active_trade["sl"] - view_center_price) * vertical_zoom)
                 entry_y = center_y - int((active_trade["entry"] - view_center_price) * vertical_zoom)
-                # Calcular X de inicio desde la vela de entrada
                 entry_vis = active_trade["entry_index"] - visible_start_global
                 if entry_vis < 0:
                     line_start_x = 0
                 else:
                     line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
-                # Los labels van 3 velas adelante de la ultima vela (minimo 80px)
                 last_candle_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
                 label_offset = max(int(3 * spacing), 80)
                 label_x = last_candle_x + label_offset
-                # Las zonas van desde entrada hasta los labels
                 line_end_x = label_x
                 rect_width = line_end_x - line_start_x
                 if rect_width > 0:
-                    # Zona TP (verde claro semi-transparente)
                     tp_surface = pygame.Surface((rect_width, abs(tp_y - entry_y)), pygame.SRCALPHA)
                     tp_surface.fill((38, 166, 154, 40))
                     tp_top = min(tp_y, entry_y)
                     screen.blit(tp_surface, (line_start_x, tp_top))
-                    # Zona SL (rojo/rosa claro semi-transparente)
                     sl_surface = pygame.Surface((rect_width, abs(sl_y - entry_y)), pygame.SRCALPHA)
                     sl_surface.fill((239, 83, 80, 40))
                     sl_top = min(sl_y, entry_y)
                     screen.blit(sl_surface, (line_start_x, sl_top))
-                # Linea de entrada (blanca punteada)
                 for x in range(line_start_x, line_end_x, 12):
                     pygame.draw.line(screen, (255, 255, 255), (x, entry_y), (x + 6, entry_y), 1)
-                # Linea TP (verde solida)
                 pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
-                # Linea SL (roja solida)
                 pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
+            # Trade de VIEWERS (cuando el streamer no opera)
+            elif viewer_trade_active is not None:
+                tp_y = center_y - int((viewer_trade_active["tp"] - view_center_price) * vertical_zoom)
+                sl_y = center_y - int((viewer_trade_active["sl"] - view_center_price) * vertical_zoom)
+                entry_y = center_y - int((viewer_trade_active["entry"] - view_center_price) * vertical_zoom)
+                entry_vis = viewer_trade_active["entry_index"] - visible_start_global
+                if entry_vis < 0:
+                    line_start_x = 0
+                else:
+                    line_start_x = int(start_x + (entry_vis * spacing)) + (candle_width // 2)
+                last_candle_x = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
+                label_offset = max(int(3 * spacing), 80)
+                label_x = last_candle_x + label_offset
+                line_end_x = label_x
+                rect_width = line_end_x - line_start_x
+                if rect_width > 0:
+                    tp_surface = pygame.Surface((rect_width, abs(tp_y - entry_y)), pygame.SRCALPHA)
+                    tp_surface.fill((38, 166, 154, 35))
+                    tp_top = min(tp_y, entry_y)
+                    screen.blit(tp_surface, (line_start_x, tp_top))
+                    sl_surface = pygame.Surface((rect_width, abs(sl_y - entry_y)), pygame.SRCALPHA)
+                    sl_surface.fill((239, 83, 80, 35))
+                    sl_top = min(sl_y, entry_y)
+                    screen.blit(sl_surface, (line_start_x, sl_top))
+                for x in range(line_start_x, line_end_x, 12):
+                    pygame.draw.line(screen, (200, 200, 200), (x, entry_y), (x + 4, entry_y), 1)
+                pygame.draw.line(screen, (38, 166, 154), (line_start_x, tp_y), (line_end_x, tp_y), 1)
+                pygame.draw.line(screen, (239, 83, 80), (line_start_x, sl_y), (line_end_x, sl_y), 1)
+                # Label "VIEWERS" al lado
+                v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
+                screen.blit(v_label, (line_end_x + 5, entry_y - 8))
+            # --- CONTADOR DE VOTOS (durante timer o trade activo de viewers) ---
+            if viewer_votes and (zone_frozen or viewer_trade_active is not None):
+                buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
+                sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
+                vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                vote_y = int(SCREEN_H * 0.20)
+                vote_x = int(SCREEN_W * 0.05)
+                # Fondo sutil
+                vote_bg = pygame.Surface((int(SCREEN_W * 0.18), int(SCREEN_H * 0.04)), pygame.SRCALPHA)
+                vote_bg.fill((0, 0, 0, 120))
+                screen.blit(vote_bg, (vote_x - 5, vote_y - 5))
+                # Texto
+                buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
+                sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
+                screen.blit(buy_txt, (vote_x, vote_y))
+                screen.blit(sell_txt, (vote_x + int(SCREEN_W * 0.08), vote_y))
         # --- FLASH AL GANAR/PERDER ---
         if flash_active:
             flash_elapsed = current_time - flash_start_time
