@@ -606,7 +606,9 @@ while running:
                             elif btn_menu.collidepoint(pmx, pmy):
                                 paused = False
                                 running = False
-                                # TODO: volver al menú en V2
+                                # Reiniciar el juego para volver al menú
+                                pygame.quit()
+                                os.execv(sys.executable, [sys.executable] + sys.argv)
                             elif btn_quit.collidepoint(pmx, pmy):
                                 paused = False
                                 running = False
