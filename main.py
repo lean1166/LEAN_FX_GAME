@@ -173,7 +173,9 @@ db_top = get_top_players(10)
 db_top = get_top_players(10)
 if len(db_top) == 0:
     test_players = ["crypto_wolf", "trader_mike", "fx_queen", "bull_master", "sniper_pro",
-                    "gold_trader", "scalp_king", "pip_hunter", "chart_ninja", "forex_ace"]
+                    "gold_trader", "scalp_king", "pip_hunter", "chart_ninja", "forex_ace",
+                    "market_shark", "candle_boss", "trend_rider", "zone_master", "pips_lord",
+                    "alpha_trader", "swing_king", "day_trader", "night_owl", "iron_hands"]
     for p in test_players:
         create_player(p)
 
@@ -1073,11 +1075,11 @@ while app_running:
                             nc = int(200 * fade_factor)
                             name_color = (nc, nc, min(255, nc + 10))
                         # Avatar circulito
-                        r_avatar = get_viewer_avatar(p["username"], 22)
+                        r_avatar = get_viewer_avatar(p["username"], 30)
                         name_x_pos = int(SCREEN_W * hx_positions[1]) + slide_offset
                         if r_avatar is not None:
-                            screen.blit(r_avatar, (name_x_pos, ry + (row_h - 3) // 2 - 11))
-                            name_x_pos += 28
+                            screen.blit(r_avatar, (name_x_pos, ry + (row_h - 3) // 2 - 15))
+                            name_x_pos += 36
                         name_txt = font_row_name.render(p["username"], True, name_color)
                         screen.blit(name_txt, (name_x_pos, ry + (row_h - 3) // 2 - name_txt.get_height() // 2))
                         # Balance (gris para los que están en negativo)

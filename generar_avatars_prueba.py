@@ -22,6 +22,16 @@ test_avatars = [
     ("chart_ninja", (0, 200, 200)),
     ("forex_ace", (255, 150, 0)),
     ("scalp_king", (150, 255, 50)),
+    ("market_shark", (80, 80, 255)),
+    ("candle_boss", (255, 80, 80)),
+    ("trend_rider", (80, 255, 80)),
+    ("zone_master", (255, 255, 80)),
+    ("pips_lord", (180, 0, 255)),
+    ("alpha_trader", (0, 180, 180)),
+    ("swing_king", (255, 120, 180)),
+    ("day_trader", (120, 255, 180)),
+    ("night_owl", (60, 60, 180)),
+    ("iron_hands", (180, 180, 60)),
 ]
 
 SIZE = 100  # 100x100 px
