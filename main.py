@@ -2154,7 +2154,7 @@ while app_running:
                     v_avatar = get_viewer_avatar(viewer['name'], 26)
                     avatar_x = nx - 75
                     if v_avatar is not None:
-                        screen.blit(v_avatar, (avatar_x, ny - v_avatar.get_height() // 2))
+                        screen.blit(v_avatar, (avatar_x, ny - v_avatar.get_height() // 2 + 2))
                     # Nombre (arranca a la derecha del avatar, alineado a la izquierda)
                     name_start_x = avatar_x + 37
                     n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
