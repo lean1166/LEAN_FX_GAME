@@ -2424,6 +2424,12 @@ while app_running:
                     v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
                     screen.blit(v_label, (line_start_x, sl_y - 18))
             # (Contador de viewers ya está integrado en el panel de arriba)
+        # --- INDICADOR RECONEXIÓN TIKTOK ---
+        if tiktok_chat.is_reconnecting():
+            font_recon = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
+            dots = "." * (1 + (current_time // 500) % 3)
+            recon_txt = font_recon.render(f"RECONECTANDO{dots}", True, (255, 200, 0))
+            screen.blit(recon_txt, (int(SCREEN_W * 0.02), int(SCREEN_H * 0.96)))
         # --- STREAK INDICATOR ---
         if streak_display and current_time - streak_display["start_time"] < STREAK_DISPLAY_DURATION:
             s_name = streak_display["name"]

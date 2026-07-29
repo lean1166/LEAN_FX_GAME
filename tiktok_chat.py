@@ -51,7 +51,8 @@ class TikTokChatReader:
         self.loop = None
         self.client = None
         self.reconnect_attempts = 0
-        self.max_reconnect = 5
+        self.max_reconnect = 999  # Reintentos infinitos
+        self.reconnecting = False  # Indicador para mostrar en pantalla
 
     def start(self):
         """Iniciar la conexión en un hilo separado"""
@@ -77,6 +78,7 @@ class TikTokChatReader:
                 @self.client.on(ConnectEvent)
                 async def on_connect(event: ConnectEvent):
                     self.connected = True
+                    self.reconnecting = False
                     self.reconnect_attempts = 0
                     print(f"[TIKTOK] Conectado al live de @{self.username}")
 
@@ -133,9 +135,11 @@ class TikTokChatReader:
 
             except Exception as e:
                 self.connected = False
+                self.reconnecting = True
                 self.reconnect_attempts += 1
-                print(f"[TIKTOK] Error: {e}. Reintento {self.reconnect_attempts}/{self.max_reconnect}")
-                await asyncio.sleep(5)
+                wait_time = min(30, 5 * self.reconnect_attempts)  # Espera progresiva: 5s, 10s, 15s... max 30s
+                print(f"[TIKTOK] Error: {e}. Reintento en {wait_time}s (intento #{self.reconnect_attempts})")
+                await asyncio.sleep(wait_time)
 
         print("[TIKTOK] Máximo de reintentos alcanzado. Usando bots simulados.")
 
@@ -162,6 +166,10 @@ class TikTokChatReader:
     def is_connected(self):
         """Verificar si está conectado"""
         return self.connected
+
+    def is_reconnecting(self):
+        """Verificar si está intentando reconectar"""
+        return self.reconnecting and not self.connected
 
     def has_real_voters(self):
         """Verificar si hay voters reales (para desactivar bots)"""
