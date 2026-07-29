@@ -1271,6 +1271,16 @@ while app_running:
                                     VIEWER_BOTS_ENABLED = cfg_viewers_enabled
                                     if sound_game_music is not None:
                                         sound_game_music.set_volume(cfg_vol_music / 100.0)
+                                    if sound_ambient is not None:
+                                        sound_ambient.set_volume(cfg_vol_music / 100.0)
+                                    # Aplicar volumen de efectos a todos los sonidos
+                                    fx_vol = cfg_vol_fx / 100.0
+                                    for s in [sound_bos, sound_fractal, sound_win, sound_loss, sound_zoom, sound_tick, sound_levelup]:
+                                        if s is not None:
+                                            s.set_volume(fx_vol)
+                                    for s in zona_voices + lean_buy_voices + lean_sell_voices + voz_win_voices + voz_loss_voices:
+                                        if s is not None:
+                                            s.set_volume(fx_vol)
                                     in_config = False
                                 elif cfg_event.key == pygame.K_DOWN:
                                     config_selected = (config_selected + 1) % len(config_options)
