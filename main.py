@@ -91,20 +91,18 @@ def play_sound(sound):
 game_started = False  # Se activa al presionar INICIAR
 
 def trade_win(amount):
-    """Llamar cuando se gana un trade. Suma al balance y reproduce WIN.mp3"""
+    """Llamar cuando se gana un trade. Suma al balance"""
     global fxp_balance, wins
     fxp_balance += amount
     wins += 1
-    play_sound(sound_win)
     update_player_balance("LEAN FX", fxp_balance, win=True)
     add_trade_history("LEAN FX", "BUY", "WIN", amount)
 
 def trade_loss(amount):
-    """Llamar cuando se pierde un trade. Resta del balance y reproduce LOSS.mp3"""
+    """Llamar cuando se pierde un trade. Resta del balance"""
     global fxp_balance, losses
     fxp_balance -= amount
     losses += 1
-    play_sound(sound_loss)
     update_player_balance("LEAN FX", fxp_balance, loss=True)
     add_trade_history("LEAN FX", "SELL", "LOSS", -amount)
 
@@ -1702,6 +1700,8 @@ while app_running:
                         random.choice(voz_loss_voices).play()
                         voice_freeze_active = True
                         voice_freeze_start = current_time
+                # Refrescar TOP 5 después de resolver
+                top_viewers = load_top_viewers()
                 viewer_trade_active = None
                 viewer_votes = []
                 if active_trade is None:
