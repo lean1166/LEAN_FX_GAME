@@ -10,6 +10,7 @@ import os
 
 # Voz de Jorge de México (la misma que Luvvoice)
 VOICE = "es-MX-JorgeNeural"
+RATE = "+8%"  # 8% más rápido (como en Luvvoice)
 
 # Carpeta de salida
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "sound")
@@ -22,18 +23,24 @@ FRASES_ZONA = [
     ("ZONA_VOZ_4.mp3", "Se activó una entrada. Tienen pocos segundos para decidir. ¿Compran o venden?"),
     ("ZONA_VOZ_5.mp3", "¡Oportunidad detectada! El precio tocó la zona. ¿Van en compra o en venta?"),
     ("ZONA_VOZ_6.mp3", "¡Llegó el momento! El mercado está en zona operativa. Escriban su decisión."),
+    ("ZONA_VOZ_7.mp3", "¡El precio entró en zona! Analicen bien. ¿Compra o venta?"),
+    ("ZONA_VOZ_8.mp3", "¡Zona activa! ¿Quién se anima? Escriban BUY o SELL."),
+    ("ZONA_VOZ_9.mp3", "El mercado nos da una oportunidad. ¿Hacia dónde va el precio? ¡Decidan ya!"),
+    ("ZONA_VOZ_10.mp3", "¡Se activó la zona! El tiempo corre. ¿Compran o venden?"),
+    ("ZONA_VOZ_11.mp3", "¡Momento clave! El precio está en una zona importante. ¿Cuál es tu jugada?"),
+    ("ZONA_VOZ_12.mp3", "¡Traders! El gráfico nos habla. ¿Van largos o cortos?"),
 ]
 
 async def generar_audio(texto, filename):
     filepath = os.path.join(OUTPUT_DIR, filename)
     print(f"Generando: {filename}...")
-    communicate = edge_tts.Communicate(texto, VOICE)
+    communicate = edge_tts.Communicate(texto, VOICE, rate=RATE)
     await communicate.save(filepath)
     print(f"  ✓ Guardado: {filepath}")
 
 async def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"Generando {len(FRASES_ZONA)} audios con voz: {VOICE}")
+    print(f"Generando {len(FRASES_ZONA)} audios con voz: {VOICE} (velocidad: {RATE})")
     print(f"Carpeta: {OUTPUT_DIR}\n")
     for filename, texto in FRASES_ZONA:
         await generar_audio(texto, filename)
