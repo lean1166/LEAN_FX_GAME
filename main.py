@@ -998,9 +998,9 @@ while app_running:
                         screen.blit(box_surf, (bx, box_y))
                         pygame.draw.rect(screen, (0, 80, 100), (bx, box_y, box_w, box_h), 1, border_radius=3)
                         lbl = font_st_label.render(label, True, (100, 140, 160))
-                        screen.blit(lbl, lbl.get_rect(center=(bx + box_w // 2, box_y + 8)))
+                        screen.blit(lbl, lbl.get_rect(center=(bx + box_w // 2, box_y + 10)))
                         val = font_st_val.render(value, True, color)
-                        screen.blit(val, val.get_rect(center=(bx + box_w // 2, box_y + box_h - 12)))
+                        screen.blit(val, val.get_rect(center=(bx + box_w // 2, box_y + box_h // 2 + 4)))
                     # --- LINEA SEPARADORA con gradiente ---
                     sep_y = int(SCREEN_H * 0.20)
                     sep_surface = pygame.Surface((int(SCREEN_W * 0.90), 2), pygame.SRCALPHA)
