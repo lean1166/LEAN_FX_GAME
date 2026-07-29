@@ -1731,7 +1731,7 @@ while app_running:
                 viewer_votes = []
                 if active_trade is None:
                     viewer_votes_display = []
-        if not zone_frozen and current_time - last_candle_time >= CANDLE_DURATION:
+        if not zone_frozen and not voice_freeze_active and current_time - last_candle_time >= CANDLE_DURATION:
             candles.append(current_candle.copy())
             if len(candles) > 1000:
                 candles.pop(0)
