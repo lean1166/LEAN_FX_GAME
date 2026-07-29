@@ -72,7 +72,9 @@ class TikTokChatReader:
                     unique_id = event.user.unique_id
                     comment = event.comment.strip().upper()
                     avatar_url = ""
-                    if event.user.avatar_url:
+                    if hasattr(event.user, 'avatar_jpg') and event.user.avatar_jpg:
+                        avatar_url = event.user.avatar_jpg
+                    elif hasattr(event.user, 'avatar_url') and event.user.avatar_url:
                         avatar_url = event.user.avatar_url
 
                     # Guardar todos los comentarios (debug)
