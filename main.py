@@ -78,6 +78,10 @@ for i in range(1, 4):
 zona_voice_playing = False
 zona_voice_channel = None
 total_operations = 0  # Contador de operaciones totales en el stream
+# Freeze por voz: congela el gráfico mientras habla (WIN/LOSS/LEAN FX)
+voice_freeze_active = False
+voice_freeze_start = 0
+VOICE_FREEZE_DURATION = 5000  # 5 seg máximo de freeze por voz de resultado
 
 def play_sound(sound):
     if sound is not None and game_started:
@@ -1450,8 +1454,11 @@ while app_running:
                 zone_detected = None
                 trade_decided = False
                 last_tick_second = -1
-        # --- MOVER PRECIO (solo si NO está congelado) ---
-        if not zone_frozen:
+        # --- Descongelar voice freeze ---
+        if voice_freeze_active and current_time - voice_freeze_start > VOICE_FREEZE_DURATION:
+            voice_freeze_active = False
+        # --- MOVER PRECIO (solo si NO está congelado y NO hay voice freeze) ---
+        if not zone_frozen and not voice_freeze_active:
             if current_time - last_tick_time >= TICK_DELAY:
                 step_size = random.uniform(0.4, 1.8)
                 # Sesgo del bot: 65% probabilidad de ir en su dirección
@@ -1480,6 +1487,8 @@ while app_running:
                             total_operations += 1
                             if voz_win_voices:
                                 random.choice(voz_win_voices).play()
+                                voice_freeze_active = True
+                                voice_freeze_start = current_time
                         elif current_price <= active_trade["sl"]:
                             trade_loss(TRADE_RISK)
                             trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
@@ -1493,6 +1502,8 @@ while app_running:
                             total_operations += 1
                             if voz_loss_voices:
                                 random.choice(voz_loss_voices).play()
+                                voice_freeze_active = True
+                                voice_freeze_start = current_time
                     elif active_trade["type"] == "SELL":
                         if current_price <= active_trade["tp"]:
                             trade_win(TRADE_RISK * TP_MULTIPLIER)
@@ -1507,6 +1518,8 @@ while app_running:
                             total_operations += 1
                             if voz_win_voices:
                                 random.choice(voz_win_voices).play()
+                                voice_freeze_active = True
+                                voice_freeze_start = current_time
                         elif current_price >= active_trade["sl"]:
                             trade_loss(TRADE_RISK)
                             trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
@@ -1520,6 +1533,8 @@ while app_running:
                             total_operations += 1
                             if voz_loss_voices:
                                 random.choice(voz_loss_voices).play()
+                                voice_freeze_active = True
+                                voice_freeze_start = current_time
                 # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
                 if active_trade is None and not zone_frozen:
                     price_now = current_candle["close"]
