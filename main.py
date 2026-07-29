@@ -2431,12 +2431,16 @@ while app_running:
             s_elapsed = current_time - streak_display["start_time"]
             s_alpha = max(0.4, 1.0 - (s_elapsed / STREAK_DISPLAY_DURATION) * 0.6)
             # Notificación grande abajo centrada
-            font_streak = pygame.font.SysFont("Arial", int(SCREEN_H * 0.026), bold=True)
-            streak_txt = font_streak.render(f"  {s_name} lleva {s_count} wins seguidos!", True, (255, 220, 50))
-            streak_w = streak_txt.get_width() + 30
-            streak_h = streak_txt.get_height() + 16
-            s_x = int(SCREEN_W * 0.35) - streak_w // 2
-            s_y = int(SCREEN_H * 0.90)
+            font_streak = pygame.font.SysFont("Arial", int(SCREEN_H * 0.030), bold=True)
+            streak_txt = font_streak.render(f"{s_name} lleva {s_count} wins seguidos!", True, (255, 220, 50))
+            # Fueguitos
+            font_fire = pygame.font.SysFont("Segoe UI Emoji", int(SCREEN_H * 0.030))
+            fire_txt = font_fire.render("~", True, (255, 100, 0))
+            full_w = fire_txt.get_width() + streak_txt.get_width() + fire_txt.get_width() + 30
+            streak_w = full_w + 40
+            streak_h = streak_txt.get_height() + 20
+            s_x = SCREEN_W // 2 - streak_w // 2
+            s_y = int(SCREEN_H * 0.88)
             # Fondo con gradiente dorado
             streak_bg = pygame.Surface((streak_w, streak_h), pygame.SRCALPHA)
             for row in range(streak_h):
@@ -2450,8 +2454,14 @@ while app_running:
             glow_s = pygame.Surface((streak_w + 8, streak_h + 8), pygame.SRCALPHA)
             glow_s.fill((255, 180, 0, int(25 * s_alpha)))
             screen.blit(glow_s, (s_x - 4, s_y - 4))
-            # Texto
-            screen.blit(streak_txt, (s_x + 15, s_y + 8))
+            # Texto con fueguitos
+            text_x = s_x + 20
+            text_y = s_y + 10
+            fire_left = font_streak.render("*", True, (255, 100, 0))
+            fire_right = font_streak.render("*", True, (255, 100, 0))
+            screen.blit(fire_left, (text_x, text_y))
+            screen.blit(streak_txt, (text_x + fire_left.get_width() + 5, text_y))
+            screen.blit(fire_right, (text_x + fire_left.get_width() + streak_txt.get_width() + 10, text_y))
         elif streak_display and current_time - streak_display["start_time"] >= STREAK_DISPLAY_DURATION:
             streak_display = None
         # --- FLASH AL GANAR/PERDER ---
