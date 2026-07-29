@@ -992,11 +992,11 @@ while app_running:
                     # Barra fina principal
                     pygame.draw.line(screen, (0, 180, 220, 180), (bar_deco_x, bar_deco_y1), (bar_deco_x, bar_deco_y2), 2)
                     # --- DIBUJAR FILAS (mejoradas v2) ---
-                    row_h = int(SCREEN_H * 0.052)
-                    visible_rows = int(SCREEN_H * 0.65) // row_h
+                    row_h = int(SCREEN_H * 0.065)
+                    visible_rows = 10
                     start_y = int(SCREEN_H * 0.26)
-                    font_row_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.019), bold=True)
-                    font_row_stat = pygame.font.SysFont("Arial", int(SCREEN_H * 0.017), bold=True)
+                    font_row_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.024), bold=True)
+                    font_row_stat = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
                     for idx in range(min(visible_rows, len(all_players) - ranking_scroll)):
                         p_idx = idx + ranking_scroll
                         if p_idx >= len(all_players):
@@ -2106,12 +2106,14 @@ while app_running:
                     # Nombre con avatar circulito
                     nx = int(SCREEN_W * pos["name"][0])
                     ny = int(SCREEN_H * pos["name"][1])
-                    # Avatar circulito al lado del nombre
-                    v_avatar = get_viewer_avatar(viewer['name'], 20)
+                    # Avatar circulito (más grande, a la izquierda del nombre)
+                    v_avatar = get_viewer_avatar(viewer['name'], 26)
+                    avatar_x = nx - 85
                     if v_avatar is not None:
-                        screen.blit(v_avatar, (nx - 70, ny - 10))
+                        screen.blit(v_avatar, (avatar_x, ny - 13))
+                    # Nombre (arranca más a la derecha)
                     n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
-                    n_rect = n_txt.get_rect(center=(nx, ny))
+                    n_rect = n_txt.get_rect(center=(nx + 10, ny))
                     screen.blit(n_txt, n_rect)
                     # W
                     w_val = viewer.get('wins', 0)
