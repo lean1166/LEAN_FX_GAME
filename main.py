@@ -2150,15 +2150,15 @@ while app_running:
                     # Nombre con avatar circulito
                     nx = int(SCREEN_W * pos["name"][0])
                     ny = int(SCREEN_H * pos["name"][1])
-                    # Avatar circulito (más grande, a la izquierda del nombre)
+                    # Avatar circulito (a la izquierda fijo)
                     v_avatar = get_viewer_avatar(viewer['name'], 26)
-                    avatar_x = nx - 85
+                    avatar_x = nx - 75
                     if v_avatar is not None:
                         screen.blit(v_avatar, (avatar_x, ny - 13))
-                    # Nombre (arranca más a la derecha)
+                    # Nombre (arranca a la derecha del avatar, alineado a la izquierda)
+                    name_start_x = avatar_x + 32
                     n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
-                    n_rect = n_txt.get_rect(center=(nx + 10, ny))
-                    screen.blit(n_txt, n_rect)
+                    screen.blit(n_txt, (name_start_x, ny - n_txt.get_height() // 2))
                     # W
                     w_val = viewer.get('wins', 0)
                     if w_val > 0:
