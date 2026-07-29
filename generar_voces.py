@@ -18,17 +18,17 @@ OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", 
 # Frases para zona detectada (se eligen al azar en el juego)
 FRASES_ZONA = [
     ("ZONA_VOZ_1.mp3", "El precio acaba de llegar a una zona operativa. Ahora piensa y responde, ¿compran o venden?"),
-    ("ZONA_VOZ_2.mp3", "¡Zona detectada! Es hora de decidir. ¿Compran o venden?"),
+    ("ZONA_VOZ_2.mp3", "¡Zona detectada! Escriban en el chat. ¿Compran o venden?"),
     ("ZONA_VOZ_3.mp3", "¡Atención traders! El precio llegó a la zona. ¿Qué hacemos?"),
-    ("ZONA_VOZ_4.mp3", "Se activó una entrada. Tienen pocos segundos para decidir. ¿Compran o venden?"),
+    ("ZONA_VOZ_4.mp3", "Se activó una entrada. Tienen pocos segundos. Escriban BUY o SELL en el chat."),
     ("ZONA_VOZ_5.mp3", "¡Oportunidad detectada! El precio tocó la zona. ¿Van en compra o en venta?"),
-    ("ZONA_VOZ_6.mp3", "¡Llegó el momento! El mercado está en zona operativa. Escriban su decisión."),
-    ("ZONA_VOZ_7.mp3", "¡El precio entró en zona! Analicen bien. ¿Compra o venta?"),
-    ("ZONA_VOZ_8.mp3", "¡Zona activa! ¿Quién se anima? Escriban BUY o SELL."),
+    ("ZONA_VOZ_6.mp3", "¡Llegó el momento! Escriban su decisión en el chat. ¿Compra o venta?"),
+    ("ZONA_VOZ_7.mp3", "¡El precio entró en zona! Analicen bien y escriban en el chat."),
+    ("ZONA_VOZ_8.mp3", "¡Zona activa! ¿Quién se anima? Escriban BUY o SELL en el chat."),
     ("ZONA_VOZ_9.mp3", "El mercado nos da una oportunidad. ¿Hacia dónde va el precio? ¡Decidan ya!"),
-    ("ZONA_VOZ_10.mp3", "¡Se activó la zona! El tiempo corre. ¿Compran o venden?"),
+    ("ZONA_VOZ_10.mp3", "¡Se activó la zona! El tiempo corre. Comenten en el chat, ¿compran o venden?"),
     ("ZONA_VOZ_11.mp3", "¡Momento clave! El precio está en una zona importante. ¿Cuál es tu jugada?"),
-    ("ZONA_VOZ_12.mp3", "¡Traders! El gráfico nos habla. ¿Van largos o cortos?"),
+    ("ZONA_VOZ_12.mp3", "¡Traders! El gráfico nos habla. Escriban en el chat, ¿van largos o cortos?"),
 ]
 
 async def generar_audio(texto, filename):
