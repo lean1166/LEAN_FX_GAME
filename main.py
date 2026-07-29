@@ -2244,29 +2244,37 @@ while app_running:
                     bar_glow = pygame.Surface((fill_w, bar_h_m + 6), pygame.SRCALPHA)
                     bar_glow.fill((bar_color[0], bar_color[1], bar_color[2], 30))
                     screen.blit(bar_glow, (bar_x_m, bar_y_m - 3))
-                # "ESCRIBE BUY O SELL" con estilo
-                font_escribe_m = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
+                # "ESCRIBE BUY O SELL" más grande
+                font_escribe_m = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
                 escribe_txt = font_escribe_m.render("ESCRIBE BUY O SELL", True, (0, 200, 220))
                 screen.blit(escribe_txt, (panel_x + 12, panel_y + int(panel_h * 0.78)))
-                # Cuadrito VIEWERS con votos (en la posición de los botones)
+                # --- PANEL VIEWERS centrado arriba ---
                 if viewer_votes:
                     buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
                     sell_count = sum(1 for v in viewer_votes if v["vote"] == "SELL")
-                    vote_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
-                    vbox_x = int(SCREEN_W * 0.50)
-                    vbox_y = int(SCREEN_H * 0.03)
-                    vbox_w = int(SCREEN_W * 0.20)
-                    vbox_h = int(SCREEN_H * 0.05)
+                    total_votes = buy_count + sell_count
+                    vbox_w = int(SCREEN_W * 0.22)
+                    vbox_h = int(SCREEN_H * 0.065)
+                    vbox_x = SCREEN_W // 2 - vbox_w // 2
+                    vbox_y = int(SCREEN_H * 0.01)
+                    # Fondo
                     vote_bg = pygame.Surface((vbox_w, vbox_h), pygame.SRCALPHA)
-                    vote_bg.fill((10, 10, 20, 210))
+                    vote_bg.fill((5, 10, 20, 230))
                     screen.blit(vote_bg, (vbox_x, vbox_y))
-                    pygame.draw.rect(screen, (0, 150, 180), (vbox_x, vbox_y, vbox_w, vbox_h), 1, border_radius=3)
-                    vw_txt = vote_font.render("VIEWERS", True, (0, 200, 220))
-                    screen.blit(vw_txt, (vbox_x + 5, vbox_y + 3))
-                    buy_txt = vote_font.render(f"BUY: {buy_count}", True, (38, 166, 154))
-                    sell_txt = vote_font.render(f"SELL: {sell_count}", True, (239, 83, 80))
-                    screen.blit(buy_txt, (vbox_x + 5, vbox_y + int(SCREEN_H * 0.025)))
-                    screen.blit(sell_txt, (vbox_x + int(SCREEN_W * 0.10), vbox_y + int(SCREEN_H * 0.025)))
+                    # Borde cyan
+                    pygame.draw.rect(screen, (0, 180, 220), (vbox_x, vbox_y, vbox_w, vbox_h), 2, border_radius=5)
+                    # "VIEWERS" centrado arriba
+                    font_vw_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.013), bold=True)
+                    vw_lbl = font_vw_label.render(f"VIEWERS ({total_votes})", True, (0, 200, 220))
+                    screen.blit(vw_lbl, vw_lbl.get_rect(center=(vbox_x + vbox_w // 2, vbox_y + int(vbox_h * 0.22))))
+                    # BUY y SELL grandes
+                    font_vote_big = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
+                    buy_txt = font_vote_big.render(f"BUY: {buy_count}", True, (38, 200, 154))
+                    sell_txt = font_vote_big.render(f"SELL: {sell_count}", True, (239, 83, 80))
+                    screen.blit(buy_txt, buy_txt.get_rect(center=(vbox_x + int(vbox_w * 0.28), vbox_y + int(vbox_h * 0.65))))
+                    screen.blit(sell_txt, sell_txt.get_rect(center=(vbox_x + int(vbox_w * 0.72), vbox_y + int(vbox_h * 0.65))))
+                    # Separador vertical
+                    pygame.draw.line(screen, (0, 100, 130), (vbox_x + vbox_w // 2, vbox_y + int(vbox_h * 0.40)), (vbox_x + vbox_w // 2, vbox_y + int(vbox_h * 0.85)), 1)
             elif active_trade is not None:
                 # LEAN FX operando - mostrar info del trade
                 info_x = int(SCREEN_W * 0.05)
