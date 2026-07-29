@@ -7,6 +7,7 @@ from database import (init_db, get_top_players, get_streamer_stats,
                       update_player_balance, add_trade_history, 
                       check_monthly_reset, get_config, create_player,
                       get_all_players_ranked)
+from tiktok_chat import TikTokChatReader, TIKTOK_AVAILABLE
 
 try:
     pygame.init()
@@ -272,6 +273,11 @@ bot_bias_direction = 0  # 1 = arriba, -1 = abajo
 VIEWER_BOTS_ENABLED = True  # Poner False para desactivar
 VIEWER_BOT_INTERVAL = 8000  # (ya no se usa, operan en zona)
 viewer_bot_last_time = 0
+
+# --- CONEXIÓN TIKTOK LIVE ---
+tiktok_chat = TikTokChatReader(username="lean.fx1")
+tiktok_chat.start()  # Inicia en hilo separado
+TIKTOK_USERNAME = "lean.fx1"
 # --- SISTEMA DE VOTOS DE VIEWERS ---
 viewer_votes = []  # Lista de {"name": str, "vote": "BUY"/"SELL"} votos pendientes
 viewer_votes_display = []  # Copia para mostrar incluso después de resolver
@@ -1589,17 +1595,24 @@ while app_running:
                     #         zone_timer_start = current_time
                     #         zone_detected = {"high": active_fvg["high"], "low": active_fvg["low"], "type": active_fvg["type"]}
                     #         zones_mitigated.add(zone_id)
-        # --- BOTS VIEWERS (votan durante la ventana, se resuelven con TP/SL) ---
-        if VIEWER_BOTS_ENABLED and game_started and zone_frozen and not getattr(pygame, '_viewers_voted_this_zone', False):
+        # --- VIEWERS: TikTok Live real O bots simulados ---
+        if game_started and zone_frozen and not getattr(pygame, '_viewers_voted_this_zone', False):
             pygame._viewers_voted_this_zone = True
-            num_voters = random.randint(2, 4)
-            all_viewer_names = [v["name"] for v in load_top_viewers()]
-            if all_viewer_names:
-                voters = random.sample(all_viewer_names, min(num_voters, len(all_viewer_names)))
+            # Abrir votación en TikTok
+            tiktok_chat.open_voting()
+
+        # Recoger votos de TikTok (se actualizan en tiempo real)
+        if game_started and zone_frozen and tiktok_chat.is_connected():
+            tiktok_votes = tiktok_chat.get_votes()
+            if tiktok_votes:
+                # Usar votos reales de TikTok
                 viewer_votes = []
-                for chosen in voters:
-                    vote = random.choice(["BUY", "SELL"])
-                    viewer_votes.append({"name": chosen, "vote": vote})
+                for tv in tiktok_votes:
+                    viewer_votes.append({"name": tv["name"], "vote": tv["vote"]})
+                    # Crear jugador en DB si no existe
+                    from database import get_player
+                    if not get_player(tv["name"]):
+                        create_player(tv["name"])
                 viewer_votes_display = viewer_votes.copy()
                 # Crear trade de viewers si no hay uno activo
                 if zone_detected is not None and viewer_trade_active is None:
@@ -1624,8 +1637,44 @@ while app_running:
                             "sl": sl_price, "tp": entry_price - tp_distance,
                             "entry_index": len(candles),
                         }
+        # Bots de backup (solo si TikTok no está conectado o no hay votos reales)
+        elif VIEWER_BOTS_ENABLED and game_started and zone_frozen and not tiktok_chat.is_connected():
+            if not viewer_votes:
+                num_voters = random.randint(2, 4)
+                all_viewer_names = [v["name"] for v in load_top_viewers()]
+                if all_viewer_names:
+                    voters = random.sample(all_viewer_names, min(num_voters, len(all_viewer_names)))
+                    viewer_votes = []
+                    for chosen in voters:
+                        vote = random.choice(["BUY", "SELL"])
+                        viewer_votes.append({"name": chosen, "vote": vote})
+                    viewer_votes_display = viewer_votes.copy()
+                    if zone_detected is not None and viewer_trade_active is None:
+                        entry_price = current_candle["close"]
+                        current_zone_id = list(zones_mitigated)[-1] if zones_mitigated else ""
+                        viewer_trade_is_extremo = current_zone_id.startswith("ob_")
+                        if zone_detected["type"] == "ALCISTA":
+                            sl_price = zone_detected["low"] - SL_BUFFER
+                            sl_distance = entry_price - sl_price
+                            tp_distance = sl_distance * TP_MULTIPLIER
+                            viewer_trade_active = {
+                                "type": "BUY", "entry": entry_price,
+                                "sl": sl_price, "tp": entry_price + tp_distance,
+                                "entry_index": len(candles),
+                            }
+                        else:
+                            sl_price = zone_detected["high"] + SL_BUFFER
+                            sl_distance = sl_price - entry_price
+                            tp_distance = sl_distance * TP_MULTIPLIER
+                            viewer_trade_active = {
+                                "type": "SELL", "entry": entry_price,
+                                "sl": sl_price, "tp": entry_price - tp_distance,
+                                "entry_index": len(candles),
+                            }
+        # Cerrar votación cuando se descongela
         if not zone_frozen:
             pygame._viewers_voted_this_zone = False
+            tiktok_chat.close_voting()
         # --- RESOLVER TRADE DE VIEWERS (cuando precio toca TP/SL) ---
         if viewer_trade_active is not None and not zone_frozen:
             vt_price = current_candle["close"]
