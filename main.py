@@ -44,11 +44,40 @@ sound_levelup = load_sound("LEVELUP.mp3")  # Sonido cuando alguien sube en TOP 5
 
 # --- CARGAR VOCES DE ZONA (Jorge de México) ---
 zona_voices = []
-for i in range(1, 10):
+for i in range(1, 13):
     sv = load_sound(f"ZONA_VOZ_{i}.mp3")
     if sv is not None:
         zona_voices.append(sv)
 zona_voice_last = -1  # Para no repetir la misma voz 2 veces seguidas
+
+# Voces LEAN FX opera
+lean_buy_voices = []
+for i in range(1, 4):
+    sv = load_sound(f"LEAN_BUY_{i}.mp3")
+    if sv is not None:
+        lean_buy_voices.append(sv)
+lean_sell_voices = []
+for i in range(1, 4):
+    sv = load_sound(f"LEAN_SELL_{i}.mp3")
+    if sv is not None:
+        lean_sell_voices.append(sv)
+
+# Voces resultado
+voz_win_voices = []
+for i in range(1, 4):
+    sv = load_sound(f"VOZ_WIN_{i}.mp3")
+    if sv is not None:
+        voz_win_voices.append(sv)
+voz_loss_voices = []
+for i in range(1, 4):
+    sv = load_sound(f"VOZ_LOSS_{i}.mp3")
+    if sv is not None:
+        voz_loss_voices.append(sv)
+
+# Estado de voz (para que el timer empiece después de que termine de hablar)
+zona_voice_playing = False
+zona_voice_channel = None
+total_operations = 0  # Contador de operaciones totales en el stream
 
 def play_sound(sound):
     if sound is not None and game_started:
@@ -1299,6 +1328,12 @@ while app_running:
                 if event.key == pygame.K_ESCAPE:
                     # Diálogo de pausa: ¿Volver al menú o cerrar?
                     paused = True
+                elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
+                    # Subir timer en vivo
+                    TIMER_DURATION = min(30000, TIMER_DURATION + 1000)
+                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                    # Bajar timer en vivo
+                    TIMER_DURATION = max(3000, TIMER_DURATION - 1000)
                     pygame.event.clear()  # Limpiar cola para que ESC no se repita
                     pygame.time.wait(100)  # Pequeña espera
                     while paused:
@@ -1349,7 +1384,10 @@ while app_running:
         # --- LOGICA DEL TIMER ---
         if zone_frozen:
             elapsed = current_time - zone_timer_start
-            if elapsed >= TIMER_DURATION:
+            # Delay de voz: el timer no cuenta hasta que la voz termine (4 seg aprox)
+            VOICE_DELAY = 4000
+            timer_elapsed = max(0, elapsed - VOICE_DELAY)
+            if timer_elapsed >= TIMER_DURATION:
                 # Timer terminó, reanudar gráfico
                 # Si nadie eligió, el bot decide automáticamente
                 if not trade_decided and BOT_ENABLED and active_trade is None:
@@ -1403,6 +1441,11 @@ while app_running:
                         bot_ops_this_hour += 1
                         trade_decided = True
                         play_sound(sound_bos)
+                        # Voz LEAN FX anuncia su trade
+                        if bot_decision == "BUY" and lean_buy_voices:
+                            random.choice(lean_buy_voices).play()
+                        elif bot_decision == "SELL" and lean_sell_voices:
+                            random.choice(lean_sell_voices).play()
                 zone_frozen = False
                 zone_detected = None
                 trade_decided = False
@@ -1434,6 +1477,9 @@ while app_running:
                             flash_start_time = current_time
                             flash_color = (38, 166, 154)
                             flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
+                            total_operations += 1
+                            if voz_win_voices:
+                                random.choice(voz_win_voices).play()
                         elif current_price <= active_trade["sl"]:
                             trade_loss(TRADE_RISK)
                             trade_history.append({"type": "BUY", "result": "LOSS", "pnl": -TRADE_RISK})
@@ -1444,6 +1490,9 @@ while app_running:
                             flash_start_time = current_time
                             flash_color = (239, 83, 80)
                             flash_text = "LOSS -1%"
+                            total_operations += 1
+                            if voz_loss_voices:
+                                random.choice(voz_loss_voices).play()
                     elif active_trade["type"] == "SELL":
                         if current_price <= active_trade["tp"]:
                             trade_win(TRADE_RISK * TP_MULTIPLIER)
@@ -1455,6 +1504,9 @@ while app_running:
                             flash_start_time = current_time
                             flash_color = (38, 166, 154)
                             flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
+                            total_operations += 1
+                            if voz_win_voices:
+                                random.choice(voz_win_voices).play()
                         elif current_price >= active_trade["sl"]:
                             trade_loss(TRADE_RISK)
                             trade_history.append({"type": "SELL", "result": "LOSS", "pnl": -TRADE_RISK})
@@ -1465,6 +1517,9 @@ while app_running:
                             flash_start_time = current_time
                             flash_color = (239, 83, 80)
                             flash_text = "LOSS -1%"
+                            total_operations += 1
+                            if voz_loss_voices:
+                                random.choice(voz_loss_voices).play()
                 # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
                 if active_trade is None and not zone_frozen:
                     price_now = current_candle["close"]
@@ -1856,7 +1911,11 @@ while app_running:
                     s_txt = font_stat_s.render(val, True, stats_colors[i])
                     s_rect = s_txt.get_rect(center=(sx, sy))
                     screen.blit(s_txt, s_rect)
-            # --- TOP 5 VIEWERS (imagen PNG + texto calibrado con cursor) ---
+            # --- CONTADOR DE OPERACIONES (OP #) ---
+            if total_operations > 0:
+                font_op = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
+                op_txt = font_op.render(f"OP #{total_operations}", True, (100, 120, 140))
+                screen.blit(op_txt, (int(SCREEN_W * 0.78), int(SCREEN_H * 0.08)))
             # Refrescar TOP 5 periódicamente y detectar cambios
             if current_time - top5_last_refresh > TOP5_REFRESH_INTERVAL:
                 refresh_top5_with_tracking(current_time)
@@ -1958,7 +2017,8 @@ while app_running:
             if zone_frozen:
                 # Timer activo - mostrar panel de votación
                 elapsed = current_time - zone_timer_start
-                remaining = max(0, TIMER_DURATION - elapsed)
+                timer_elapsed_render = max(0, elapsed - 4000)  # VOICE_DELAY
+                remaining = max(0, TIMER_DURATION - timer_elapsed_render)
                 seconds_left = remaining / 1000.0
                 # Tick-tock en los últimos 5 segundos
                 current_second = int(seconds_left)
