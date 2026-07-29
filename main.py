@@ -126,6 +126,42 @@ if os.path.exists(PROFILE_DIR):
 if avatar_img is None:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
 
+# --- SISTEMA DE AVATARES DE VIEWERS (circulitos) ---
+AVATARS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "avatars")
+os.makedirs(AVATARS_DIR, exist_ok=True)
+viewer_avatar_cache = {}  # Cache: {"username": pygame.Surface}
+
+def get_viewer_avatar(username, size=24):
+    """Cargar avatar de viewer como circulito. Retorna Surface o None"""
+    if username in viewer_avatar_cache:
+        return viewer_avatar_cache[username]
+    # Buscar archivo
+    for ext in [".png", ".jpg", ".jpeg"]:
+        filepath = os.path.join(AVATARS_DIR, f"{username}{ext}")
+        if os.path.exists(filepath):
+            try:
+                img = pygame.image.load(filepath).convert_alpha()
+                img = pygame.transform.smoothscale(img, (size, size))
+                # Recortar en circulo
+                circle_surface = pygame.Surface((size, size), pygame.SRCALPHA)
+                pygame.draw.circle(circle_surface, (255, 255, 255), (size // 2, size // 2), size // 2)
+                # Usar el circulo como máscara
+                final = pygame.Surface((size, size), pygame.SRCALPHA)
+                for x in range(size):
+                    for y in range(size):
+                        if circle_surface.get_at((x, y))[3] > 0:
+                            final.set_at((x, y), img.get_at((x, y)))
+                # Borde del circulo
+                pygame.draw.circle(final, (0, 180, 220), (size // 2, size // 2), size // 2, 2)
+                viewer_avatar_cache[username] = final
+                return final
+            except Exception as e:
+                print(f"[AVATAR] Error cargando {username}: {e}")
+                viewer_avatar_cache[username] = None
+                return None
+    viewer_avatar_cache[username] = None
+    return None
+
 # --- TOP 5 VIEWERS (desde base de datos) ---
 font_top = pygame.font.SysFont("Arial", 14, bold=True)
 # Verificar reset mensual
@@ -1026,14 +1062,20 @@ while app_running:
                             num_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.017), bold=True)
                             num_txt = num_font.render(str(p_idx + 1), True, (140, 140, 160))
                             screen.blit(num_txt, num_txt.get_rect(center=(medal_cx, medal_cy)))
-                        # Nombre
+                        # Nombre con avatar
                         if p_idx < 3:
                             name_color = (255, 255, 255)
                         else:
                             nc = int(200 * fade_factor)
                             name_color = (nc, nc, min(255, nc + 10))
+                        # Avatar circulito
+                        r_avatar = get_viewer_avatar(p["username"], 22)
+                        name_x_pos = int(SCREEN_W * hx_positions[1]) + slide_offset
+                        if r_avatar is not None:
+                            screen.blit(r_avatar, (name_x_pos, ry + (row_h - 3) // 2 - 11))
+                            name_x_pos += 28
                         name_txt = font_row_name.render(p["username"], True, name_color)
-                        screen.blit(name_txt, (int(SCREEN_W * hx_positions[1]) + slide_offset, ry + (row_h - 3) // 2 - name_txt.get_height() // 2))
+                        screen.blit(name_txt, (name_x_pos, ry + (row_h - 3) // 2 - name_txt.get_height() // 2))
                         # Balance (gris para los que están en negativo)
                         if p['balance'] < 10000:
                             bal_color = (140, 140, 150)
@@ -2057,9 +2099,13 @@ while app_running:
                             arrow_color = (int(255 * h_alpha), 0, 0)
                             arrow_txt = arrow_font.render("-", True, arrow_color)
                             screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, card_cy)))
-                    # Nombre
+                    # Nombre con avatar circulito
                     nx = int(SCREEN_W * pos["name"][0])
                     ny = int(SCREEN_H * pos["name"][1])
+                    # Avatar circulito al lado del nombre
+                    v_avatar = get_viewer_avatar(viewer['name'], 20)
+                    if v_avatar is not None:
+                        screen.blit(v_avatar, (nx - 70, ny - 10))
                     n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
                     n_rect = n_txt.get_rect(center=(nx, ny))
                     screen.blit(n_txt, n_rect)

@@ -7,6 +7,25 @@ Requisito: pip install TikTokLive
 import threading
 import asyncio
 import time
+import os
+import urllib.request
+
+# Carpeta de avatares
+AVATARS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "avatars")
+os.makedirs(AVATARS_DIR, exist_ok=True)
+
+def download_avatar(username, url):
+    """Descarga avatar de TikTok y lo guarda localmente"""
+    if not url:
+        return
+    filepath = os.path.join(AVATARS_DIR, f"{username}.jpg")
+    if os.path.exists(filepath):
+        return  # Ya lo tenemos
+    try:
+        urllib.request.urlretrieve(url, filepath)
+        print(f"[AVATAR] Descargado: {username}")
+    except Exception as e:
+        print(f"[AVATAR] Error descargando {username}: {e}")
 
 # Intentar importar TikTokLive
 try:
@@ -105,6 +124,8 @@ class TikTokChatReader:
                                 "vote": vote,
                                 "avatar_url": avatar_url
                             })
+                            # Descargar avatar en background
+                            threading.Thread(target=download_avatar, args=(username, avatar_url), daemon=True).start()
                             print(f"[VOTO] {username} -> {vote}")
 
                 print(f"[TIKTOK] Conectando a @{self.username}...")
