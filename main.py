@@ -2424,39 +2424,34 @@ while app_running:
                     v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
                     screen.blit(v_label, (line_start_x, sl_y - 18))
             # (Contador de viewers ya está integrado en el panel de arriba)
-        # --- STREAK INDICATOR (3 estilos) ---
+        # --- STREAK INDICATOR ---
         if streak_display and current_time - streak_display["start_time"] < STREAK_DISPLAY_DURATION:
             s_name = streak_display["name"]
             s_count = streak_display["streak"]
             s_elapsed = current_time - streak_display["start_time"]
-            s_alpha = max(0, 1.0 - (s_elapsed / STREAK_DISPLAY_DURATION) * 0.5)
-            # ESTILO 1: Notificación abajo del gráfico
-            font_streak1 = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-            streak1_txt = font_streak1.render(f"  {s_name} lleva {s_count} wins seguidos!", True, (255, 200, 0))
-            streak1_bg = pygame.Surface((streak1_txt.get_width() + 20, streak1_txt.get_height() + 10), pygame.SRCALPHA)
-            streak1_bg.fill((20, 10, 0, int(180 * s_alpha)))
-            s1_x = int(SCREEN_W * 0.35) - streak1_bg.get_width() // 2
-            s1_y = int(SCREEN_H * 0.92)
-            screen.blit(streak1_bg, (s1_x, s1_y))
-            pygame.draw.rect(screen, (255, 150, 0), (s1_x, s1_y, streak1_bg.get_width(), streak1_bg.get_height()), 1, border_radius=4)
-            screen.blit(streak1_txt, (s1_x + 10, s1_y + 5))
-            # ESTILO 2: Arriba al lado del panel viewers
-            font_streak2 = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
-            streak2_txt = font_streak2.render(f"{s_name} {s_count} WINS", True, (255, 180, 0))
-            s2_x = int(SCREEN_W * 0.62)
-            s2_y = int(SCREEN_H * 0.02)
-            screen.blit(streak2_txt, (s2_x, s2_y))
-            # ESTILO 3: En el TOP 5 al lado del nombre (si está en el top)
-            for i, viewer in enumerate(top_viewers):
-                if viewer["name"] == s_name:
-                    pos = card_positions[i] if i < len(card_positions) else None
-                    if pos:
-                        fire_x = int(SCREEN_W * pos["name"][0]) + 70
-                        fire_y = int(SCREEN_H * pos["name"][1])
-                        font_fire = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
-                        fire_txt = font_fire.render(f"{s_count}", True, (255, 150, 0))
-                        screen.blit(fire_txt, fire_txt.get_rect(center=(fire_x, fire_y)))
-                    break
+            s_alpha = max(0.4, 1.0 - (s_elapsed / STREAK_DISPLAY_DURATION) * 0.6)
+            # Notificación grande abajo centrada
+            font_streak = pygame.font.SysFont("Arial", int(SCREEN_H * 0.026), bold=True)
+            streak_txt = font_streak.render(f"  {s_name} lleva {s_count} wins seguidos!", True, (255, 220, 50))
+            streak_w = streak_txt.get_width() + 30
+            streak_h = streak_txt.get_height() + 16
+            s_x = int(SCREEN_W * 0.35) - streak_w // 2
+            s_y = int(SCREEN_H * 0.90)
+            # Fondo con gradiente dorado
+            streak_bg = pygame.Surface((streak_w, streak_h), pygame.SRCALPHA)
+            for row in range(streak_h):
+                a = int(200 * s_alpha * (0.8 + 0.2 * (row / streak_h)))
+                pygame.draw.line(streak_bg, (40, 25, 0, a), (0, row), (streak_w, row))
+            screen.blit(streak_bg, (s_x, s_y))
+            # Borde dorado pulsante
+            pulse = int(220 + 35 * math.sin(current_time / 150.0))
+            pygame.draw.rect(screen, (pulse, int(pulse * 0.75), 0), (s_x, s_y, streak_w, streak_h), 2, border_radius=6)
+            # Glow exterior
+            glow_s = pygame.Surface((streak_w + 8, streak_h + 8), pygame.SRCALPHA)
+            glow_s.fill((255, 180, 0, int(25 * s_alpha)))
+            screen.blit(glow_s, (s_x - 4, s_y - 4))
+            # Texto
+            screen.blit(streak_txt, (s_x + 15, s_y + 8))
         elif streak_display and current_time - streak_display["start_time"] >= STREAK_DISPLAY_DURATION:
             streak_display = None
         # --- FLASH AL GANAR/PERDER ---
