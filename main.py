@@ -927,15 +927,15 @@ while app_running:
                     font_rank_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.055), bold=True)
                     # Sombra
                     title_shadow = font_rank_title.render("RANKING GENERAL", True, (0, 80, 100))
-                    screen.blit(title_shadow, title_shadow.get_rect(center=(SCREEN_W // 2 + 2, int(SCREEN_H * 0.06) + 2)))
+                    screen.blit(title_shadow, title_shadow.get_rect(center=(SCREEN_W // 2 + 2, int(SCREEN_H * 0.04) + 2)))
                     # Texto principal
                     rank_title = font_rank_title.render("RANKING GENERAL", True, (0, 220, 255))
-                    screen.blit(rank_title, rank_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.06))))
-                    # Total jugadores arriba derecha
+                    screen.blit(rank_title, rank_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.04))))
+                    # Total jugadores arriba derecha (pegado como EN VIVO)
                     all_players = get_all_players_ranked()
                     font_total = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
                     total_txt = font_total.render(f"{len(all_players)} jugadores activos", True, (0, 200, 220))
-                    screen.blit(total_txt, (int(SCREEN_W * 0.82), int(SCREEN_H * 0.03)))
+                    screen.blit(total_txt, (SCREEN_W - total_txt.get_width() - int(SCREEN_W * 0.03), int(SCREEN_H * 0.03)))
                     # --- INDICADOR EN VIVO (más grande) ---
                     live_x = int(SCREEN_W * 0.03)
                     live_y = int(SCREEN_H * 0.04)
@@ -977,9 +977,9 @@ while app_running:
                     st_name = font_st_name.render("LEAN FX", True, (0, 220, 255))
                     screen.blit(st_name, (name_x, st_bg_y + (st_panel_h - st_name.get_height()) // 2))
                     # Cajitas de stats (al lado derecho del nombre)
-                    font_st_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.010))
-                    font_st_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
-                    box_h = int(st_panel_h * 0.70)
+                    font_st_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.013), bold=True)
+                    font_st_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                    box_h = int(st_panel_h * 0.75)
                     box_w = int(st_panel_w * 0.12)
                     box_gap = int(st_panel_w * 0.01)
                     box_start_x = name_x + st_name.get_width() + 20
