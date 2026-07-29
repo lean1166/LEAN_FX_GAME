@@ -882,6 +882,17 @@ while app_running:
                         "size": random.randint(1, 3),
                         "alpha": random.randint(40, 120),
                     })
+                # Velas japonesas de fondo (animadas)
+                rank_candles = []
+                for _ in range(12):
+                    rank_candles.append({
+                        "x": random.randint(0, SCREEN_W),
+                        "y": random.randint(int(SCREEN_H * 0.2), int(SCREEN_H * 0.9)),
+                        "w": random.randint(8, 14),
+                        "h": random.randint(30, 100),
+                        "color": random.choice([(38, 166, 154), (239, 83, 80)]),
+                        "speed": random.uniform(0.3, 0.8),
+                    })
                 while in_ranking:
                     clock.tick(60)
                     current_time = pygame.time.get_ticks()
@@ -896,6 +907,22 @@ while app_running:
                         ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
                         pygame.draw.circle(ps, (0, 180, 220, p["alpha"]), (p["size"], p["size"]), p["size"])
                         screen.blit(ps, (int(p["x"]), int(p["y"])))
+                    # --- VELAS JAPONESAS DE FONDO (baja opacidad) ---
+                    candle_bg_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+                    for rc in rank_candles:
+                        rc["x"] -= rc["speed"]
+                        if rc["x"] < -20:
+                            rc["x"] = SCREEN_W + 20
+                            rc["y"] = random.randint(int(SCREEN_H * 0.2), int(SCREEN_H * 0.9))
+                            rc["h"] = random.randint(30, 100)
+                        col = (rc["color"][0], rc["color"][1], rc["color"][2], 30)
+                        pygame.draw.rect(candle_bg_surface, col, (int(rc["x"]), int(rc["y"]), rc["w"], rc["h"]))
+                        # Mecha
+                        wick_col = (rc["color"][0], rc["color"][1], rc["color"][2], 20)
+                        cx = int(rc["x"]) + rc["w"] // 2
+                        pygame.draw.line(candle_bg_surface, wick_col, (cx, int(rc["y"]) - 12), (cx, int(rc["y"])), 1)
+                        pygame.draw.line(candle_bg_surface, wick_col, (cx, int(rc["y"]) + rc["h"]), (cx, int(rc["y"]) + rc["h"] + 12), 1)
+                    screen.blit(candle_bg_surface, (0, 0))
                     # --- TITULO con sombra/glow ---
                     font_rank_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.055), bold=True)
                     # Sombra
@@ -908,7 +935,7 @@ while app_running:
                     all_players = get_all_players_ranked()
                     font_total = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
                     total_txt = font_total.render(f"{len(all_players)} jugadores activos", True, (0, 200, 220))
-                    screen.blit(total_txt, (int(SCREEN_W * 0.78), int(SCREEN_H * 0.04)))
+                    screen.blit(total_txt, (int(SCREEN_W * 0.82), int(SCREEN_H * 0.03)))
                     # --- INDICADOR EN VIVO (más grande) ---
                     live_x = int(SCREEN_W * 0.03)
                     live_y = int(SCREEN_H * 0.04)
@@ -926,8 +953,8 @@ while app_running:
                     st_total = streamer_now["wins"] + streamer_now["losses"]
                     st_wr = int((streamer_now["wins"] / st_total * 100)) if st_total > 0 else 0
                     st_profit_pct = ((streamer_now['balance'] - 10000) / 10000) * 100
-                    st_panel_w = int(SCREEN_W * 0.60)
-                    st_panel_h = int(SCREEN_H * 0.12)
+                    st_panel_w = int(SCREEN_W * 0.62)
+                    st_panel_h = int(SCREEN_H * 0.09)
                     st_bg_x = SCREEN_W // 2 - st_panel_w // 2
                     st_bg_y = int(SCREEN_H * 0.08)
                     # Fondo
@@ -936,28 +963,27 @@ while app_running:
                         alpha = int(130 + 30 * (row / st_panel_h))
                         pygame.draw.line(st_bg, (0, 20, 40, alpha), (0, row), (st_panel_w, row))
                     screen.blit(st_bg, (st_bg_x, st_bg_y))
-                    # Borde glow
                     glow_alpha = int(180 + 60 * math.sin(current_time / 500.0))
                     pygame.draw.rect(screen, (0, min(255, glow_alpha), 220), (st_bg_x, st_bg_y, st_panel_w, st_panel_h), 2, border_radius=6)
-                    # Avatar + Nombre (fila superior)
+                    # Avatar + Nombre (centro-izquierda)
                     if avatar_img is not None:
-                        av_size = int(st_panel_h * 0.45)
+                        av_size = int(st_panel_h * 0.60)
                         av_small = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
-                        screen.blit(av_small, (st_bg_x + 12, st_bg_y + 8))
-                        name_x = st_bg_x + 12 + av_size + 10
+                        screen.blit(av_small, (st_bg_x + 10, st_bg_y + (st_panel_h - av_size) // 2))
+                        name_x = st_bg_x + 10 + av_size + 8
                     else:
-                        name_x = st_bg_x + 15
-                    font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.026), bold=True)
+                        name_x = st_bg_x + 12
+                    font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
                     st_name = font_st_name.render("LEAN FX", True, (0, 220, 255))
-                    screen.blit(st_name, (name_x, st_bg_y + 12))
-                    # Cajitas de stats (fila inferior)
-                    font_st_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.012))
-                    font_st_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
-                    box_y = st_bg_y + int(st_panel_h * 0.55)
-                    box_h = int(st_panel_h * 0.38)
-                    box_w = int(st_panel_w * 0.17)
-                    box_gap = int(st_panel_w * 0.03)
-                    box_start_x = st_bg_x + 15
+                    screen.blit(st_name, (name_x, st_bg_y + (st_panel_h - st_name.get_height()) // 2))
+                    # Cajitas de stats (al lado derecho del nombre)
+                    font_st_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.010))
+                    font_st_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
+                    box_h = int(st_panel_h * 0.70)
+                    box_w = int(st_panel_w * 0.12)
+                    box_gap = int(st_panel_w * 0.01)
+                    box_start_x = name_x + st_name.get_width() + 20
+                    box_y = st_bg_y + (st_panel_h - box_h) // 2
                     stats_boxes = [
                         ("BALANCE", f"{int(streamer_now['balance'])}", (0, 220, 255)),
                         ("PROFIT", f"{st_profit_pct:+.1f}%", (38, 200, 154) if st_profit_pct >= 0 else (239, 83, 80)),
@@ -967,17 +993,14 @@ while app_running:
                     ]
                     for i, (label, value, color) in enumerate(stats_boxes):
                         bx = box_start_x + i * (box_w + box_gap)
-                        # Cajita fondo
                         box_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
                         box_surf.fill((0, 20, 35, 150))
                         screen.blit(box_surf, (bx, box_y))
                         pygame.draw.rect(screen, (0, 80, 100), (bx, box_y, box_w, box_h), 1, border_radius=3)
-                        # Label arriba
                         lbl = font_st_label.render(label, True, (100, 140, 160))
                         screen.blit(lbl, lbl.get_rect(center=(bx + box_w // 2, box_y + 8)))
-                        # Valor abajo
                         val = font_st_val.render(value, True, color)
-                        screen.blit(val, val.get_rect(center=(bx + box_w // 2, box_y + box_h - 10)))
+                        screen.blit(val, val.get_rect(center=(bx + box_w // 2, box_y + box_h - 12)))
                     # --- LINEA SEPARADORA con gradiente ---
                     sep_y = int(SCREEN_H * 0.20)
                     sep_surface = pygame.Surface((int(SCREEN_W * 0.90), 2), pygame.SRCALPHA)
