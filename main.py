@@ -1266,7 +1266,7 @@ while app_running:
         btn_h = int(SCREEN_H * 0.08)
         btn_iniciar = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (341/768)) - btn_h // 2, btn_w, btn_h)
         btn_ranking = pygame.Rect(int(SCREEN_W * (686/1366)) - btn_w // 2, int(SCREEN_H * (476/768)) - btn_h // 2, btn_w, btn_h)
-        btn_config = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (607/768)) - btn_h // 2, btn_w, btn_h)
+        btn_config = pygame.Rect(int(SCREEN_W * (952/1920)) - btn_w // 2, int(SCREEN_H * (862/1080)) - btn_h // 2, btn_w, btn_h)
         # Dibujar efecto click (oscurecer en el centro del botón)
         buttons = [("iniciar", btn_iniciar), ("ranking", btn_ranking), ("config", btn_config)]
         for btn_name, btn_rect in buttons:
