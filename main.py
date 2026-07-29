@@ -1332,14 +1332,8 @@ while app_running:
                 if event.key == pygame.K_ESCAPE:
                     # Diálogo de pausa: ¿Volver al menú o cerrar?
                     paused = True
-                elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
-                    # Subir timer en vivo
-                    TIMER_DURATION = min(30000, TIMER_DURATION + 1000)
-                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
-                    # Bajar timer en vivo
-                    TIMER_DURATION = max(3000, TIMER_DURATION - 1000)
-                    pygame.event.clear()  # Limpiar cola para que ESC no se repita
-                    pygame.time.wait(100)  # Pequeña espera
+                    pygame.event.clear()
+                    pygame.time.wait(100)
                     while paused:
                         # Fondo oscuro semi-transparente
                         pause_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
@@ -1382,9 +1376,14 @@ while app_running:
                                     paused = False
                                     running = False
                                     app_running = False
+                elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
+                    TIMER_DURATION = min(30000, TIMER_DURATION + 1000)
+                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                    TIMER_DURATION = max(3000, TIMER_DURATION - 1000)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 print(f"[CLICK] x={mx}, y={my}")
+        # --- LOGICA DEL TIMER ---
         # --- LOGICA DEL TIMER ---
         if zone_frozen:
             elapsed = current_time - zone_timer_start
