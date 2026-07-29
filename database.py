@@ -178,13 +178,21 @@ def set_config(key, value):
 
 def reset_all_players():
     """Reiniciar todos los balances y stats (reset mensual)"""
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("UPDATE players SET balance = 10000, wins = 0, losses = 0")
-    c.execute("INSERT INTO resets (reason) VALUES (?)", ("Reset mensual",))
-    c.execute("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", ("last_reset", datetime.now().strftime("%Y-%m")))
-    conn.commit()
-    conn.close()
+    import time as _time
+    for attempt in range(3):
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("UPDATE players SET balance = 10000, wins = 0, losses = 0")
+            c.execute("INSERT INTO resets (reason) VALUES (?)", ("Reset mensual",))
+            c.execute("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", ("last_reset", datetime.now().strftime("%Y-%m")))
+            conn.commit()
+            conn.close()
+            return
+        except Exception as e:
+            print(f"[DB] Reset intento {attempt+1}/3 falló: {e}")
+            _time.sleep(0.5)
+    print("[DB] No se pudo resetear después de 3 intentos")
 
 
 def check_monthly_reset():
