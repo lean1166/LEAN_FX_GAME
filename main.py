@@ -926,46 +926,58 @@ while app_running:
                     st_total = streamer_now["wins"] + streamer_now["losses"]
                     st_wr = int((streamer_now["wins"] / st_total * 100)) if st_total > 0 else 0
                     st_profit_pct = ((streamer_now['balance'] - 10000) / 10000) * 100
-                    st_panel_w = int(SCREEN_W * 0.58)
-                    st_panel_h = int(SCREEN_H * 0.10)
+                    st_panel_w = int(SCREEN_W * 0.60)
+                    st_panel_h = int(SCREEN_H * 0.12)
                     st_bg_x = SCREEN_W // 2 - st_panel_w // 2
-                    st_bg_y = int(SCREEN_H * 0.09)
-                    # Fondo con gradiente
+                    st_bg_y = int(SCREEN_H * 0.08)
+                    # Fondo
                     st_bg = pygame.Surface((st_panel_w, st_panel_h), pygame.SRCALPHA)
                     for row in range(st_panel_h):
-                        alpha = int(120 + 40 * (row / st_panel_h))
-                        pygame.draw.line(st_bg, (0, 25, 45, alpha), (0, row), (st_panel_w, row))
+                        alpha = int(130 + 30 * (row / st_panel_h))
+                        pygame.draw.line(st_bg, (0, 20, 40, alpha), (0, row), (st_panel_w, row))
                     screen.blit(st_bg, (st_bg_x, st_bg_y))
-                    # Borde glow pulsante
+                    # Borde glow
                     glow_alpha = int(180 + 60 * math.sin(current_time / 500.0))
-                    glow_color = (0, min(255, glow_alpha), 220)
-                    pygame.draw.rect(screen, glow_color, (st_bg_x, st_bg_y, st_panel_w, st_panel_h), 2, border_radius=6)
-                    # Avatar grande
+                    pygame.draw.rect(screen, (0, min(255, glow_alpha), 220), (st_bg_x, st_bg_y, st_panel_w, st_panel_h), 2, border_radius=6)
+                    # Avatar + Nombre (fila superior)
                     if avatar_img is not None:
-                        av_size = int(st_panel_h * 0.80)
+                        av_size = int(st_panel_h * 0.45)
                         av_small = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
-                        screen.blit(av_small, (st_bg_x + 12, st_bg_y + (st_panel_h - av_size) // 2))
-                        info_offset = av_size + 20
+                        screen.blit(av_small, (st_bg_x + 12, st_bg_y + 8))
+                        name_x = st_bg_x + 12 + av_size + 10
                     else:
-                        info_offset = 15
-                    # Nombre streamer (más grande)
+                        name_x = st_bg_x + 15
                     font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.026), bold=True)
                     st_name = font_st_name.render("LEAN FX", True, (0, 220, 255))
-                    screen.blit(st_name, (st_bg_x + info_offset, st_bg_y + 5))
-                    # Stats en cajitas separadas
-                    font_st_stat = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
-                    stat_y = st_bg_y + int(st_panel_h * 0.50)
-                    stat_x = st_bg_x + info_offset
-                    stats_data = [
-                        (f"{int(streamer_now['balance'])} FXP", (0, 220, 255)),
-                        (f"{st_profit_pct:+.1f}%", (38, 200, 154) if st_profit_pct >= 0 else (239, 83, 80)),
-                        (f"W:{streamer_now['wins']}", (38, 166, 154)),
-                        (f"L:{streamer_now['losses']}", (239, 83, 80)),
-                        (f"WR:{st_wr}%", (200, 200, 210)),
+                    screen.blit(st_name, (name_x, st_bg_y + 12))
+                    # Cajitas de stats (fila inferior)
+                    font_st_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.012))
+                    font_st_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                    box_y = st_bg_y + int(st_panel_h * 0.55)
+                    box_h = int(st_panel_h * 0.38)
+                    box_w = int(st_panel_w * 0.17)
+                    box_gap = int(st_panel_w * 0.03)
+                    box_start_x = st_bg_x + 15
+                    stats_boxes = [
+                        ("BALANCE", f"{int(streamer_now['balance'])}", (0, 220, 255)),
+                        ("PROFIT", f"{st_profit_pct:+.1f}%", (38, 200, 154) if st_profit_pct >= 0 else (239, 83, 80)),
+                        ("WINS", f"{streamer_now['wins']}", (38, 166, 154)),
+                        ("LOSSES", f"{streamer_now['losses']}", (239, 83, 80)),
+                        ("WIN RATE", f"{st_wr}%", (200, 200, 220)),
                     ]
-                    for i, (stat_text, stat_color) in enumerate(stats_data):
-                        s_txt = font_st_stat.render(stat_text, True, stat_color)
-                        screen.blit(s_txt, (stat_x + i * int(st_panel_w * 0.15), stat_y))
+                    for i, (label, value, color) in enumerate(stats_boxes):
+                        bx = box_start_x + i * (box_w + box_gap)
+                        # Cajita fondo
+                        box_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                        box_surf.fill((0, 20, 35, 150))
+                        screen.blit(box_surf, (bx, box_y))
+                        pygame.draw.rect(screen, (0, 80, 100), (bx, box_y, box_w, box_h), 1, border_radius=3)
+                        # Label arriba
+                        lbl = font_st_label.render(label, True, (100, 140, 160))
+                        screen.blit(lbl, lbl.get_rect(center=(bx + box_w // 2, box_y + 8)))
+                        # Valor abajo
+                        val = font_st_val.render(value, True, color)
+                        screen.blit(val, val.get_rect(center=(bx + box_w // 2, box_y + box_h - 10)))
                     # --- LINEA SEPARADORA con gradiente ---
                     sep_y = int(SCREEN_H * 0.20)
                     sep_surface = pygame.Surface((int(SCREEN_W * 0.90), 2), pygame.SRCALPHA)
@@ -1581,7 +1593,7 @@ while app_running:
                             flash_color = (38, 166, 154)
                             flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                             total_operations += 1
-                            if voz_win_voices:
+                            if voz_win_voices and viewer_trade_active is None:
                                 random.choice(voz_win_voices).play()
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
@@ -1596,7 +1608,7 @@ while app_running:
                             flash_color = (239, 83, 80)
                             flash_text = "LOSS -1%"
                             total_operations += 1
-                            if voz_loss_voices:
+                            if voz_loss_voices and viewer_trade_active is None:
                                 random.choice(voz_loss_voices).play()
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
@@ -1612,7 +1624,7 @@ while app_running:
                             flash_color = (38, 166, 154)
                             flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                             total_operations += 1
-                            if voz_win_voices:
+                            if voz_win_voices and viewer_trade_active is None:
                                 random.choice(voz_win_voices).play()
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
@@ -1627,7 +1639,7 @@ while app_running:
                             flash_color = (239, 83, 80)
                             flash_text = "LOSS -1%"
                             total_operations += 1
-                            if voz_loss_voices:
+                            if voz_loss_voices and viewer_trade_active is None:
                                 random.choice(voz_loss_voices).play()
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
@@ -2362,5 +2374,9 @@ while app_running:
                 flash_rect = flash_txt.get_rect(center=(int(SCREEN_W * 0.50), int(SCREEN_H * 0.45)))
                 screen.blit(flash_txt, flash_rect)
         pygame.display.flip()
+
+    # Parar música al salir del game loop (volver al menú)
+    if sound_game_music is not None:
+        sound_game_music.stop()
 
 pygame.quit()
