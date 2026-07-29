@@ -906,59 +906,66 @@ while app_running:
                     screen.blit(rank_title, rank_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.06))))
                     # Total jugadores arriba derecha
                     all_players = get_all_players_ranked()
-                    total_txt = font_top.render(f"{len(all_players)} jugadores activos", True, (0, 180, 200))
-                    screen.blit(total_txt, (int(SCREEN_W * 0.80), int(SCREEN_H * 0.04)))
-                    # --- INDICADOR EN VIVO (puntito verde pulsante) ---
+                    font_total = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
+                    total_txt = font_total.render(f"{len(all_players)} jugadores activos", True, (0, 200, 220))
+                    screen.blit(total_txt, (int(SCREEN_W * 0.78), int(SCREEN_H * 0.04)))
+                    # --- INDICADOR EN VIVO (más grande) ---
                     live_x = int(SCREEN_W * 0.03)
                     live_y = int(SCREEN_H * 0.04)
-                    live_pulse = int(6 + 3 * math.sin(current_time / 300.0))
+                    live_pulse = int(8 + 3 * math.sin(current_time / 300.0))
                     live_alpha = int(180 + 75 * math.sin(current_time / 300.0))
-                    # Glow del punto
                     live_glow = pygame.Surface((live_pulse * 4, live_pulse * 4), pygame.SRCALPHA)
                     pygame.draw.circle(live_glow, (0, 255, 80, 40), (live_pulse * 2, live_pulse * 2), live_pulse * 2)
                     screen.blit(live_glow, (live_x - live_pulse * 2, live_y - live_pulse * 2))
-                    # Punto principal
                     pygame.draw.circle(screen, (0, min(255, live_alpha + 50), 80), (live_x, live_y), live_pulse)
-                    # Texto "EN VIVO"
-                    font_live = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
+                    font_live = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
                     live_txt = font_live.render("EN VIVO", True, (0, 220, 100))
-                    screen.blit(live_txt, (live_x + 12, live_y - live_txt.get_height() // 2))
-                    # --- PANEL STREAMER MEJORADO ---
+                    screen.blit(live_txt, (live_x + 14, live_y - live_txt.get_height() // 2))
+                    # --- PANEL STREAMER PROFESIONAL ---
                     streamer_now = get_streamer_stats()
                     st_total = streamer_now["wins"] + streamer_now["losses"]
                     st_wr = int((streamer_now["wins"] / st_total * 100)) if st_total > 0 else 0
-                    st_panel_w = int(SCREEN_W * 0.55)
-                    st_panel_h = int(SCREEN_H * 0.08)
+                    st_profit_pct = ((streamer_now['balance'] - 10000) / 10000) * 100
+                    st_panel_w = int(SCREEN_W * 0.58)
+                    st_panel_h = int(SCREEN_H * 0.10)
                     st_bg_x = SCREEN_W // 2 - st_panel_w // 2
-                    st_bg_y = int(SCREEN_H * 0.10)
-                    # Fondo con gradiente sutil
+                    st_bg_y = int(SCREEN_H * 0.09)
+                    # Fondo con gradiente
                     st_bg = pygame.Surface((st_panel_w, st_panel_h), pygame.SRCALPHA)
                     for row in range(st_panel_h):
-                        alpha = int(100 + 40 * (row / st_panel_h))
-                        pygame.draw.line(st_bg, (0, 30, 50, alpha), (0, row), (st_panel_w, row))
+                        alpha = int(120 + 40 * (row / st_panel_h))
+                        pygame.draw.line(st_bg, (0, 25, 45, alpha), (0, row), (st_panel_w, row))
                     screen.blit(st_bg, (st_bg_x, st_bg_y))
                     # Borde glow pulsante
                     glow_alpha = int(180 + 60 * math.sin(current_time / 500.0))
                     glow_color = (0, min(255, glow_alpha), 220)
-                    pygame.draw.rect(screen, glow_color, (st_bg_x, st_bg_y, st_panel_w, st_panel_h), 2, border_radius=4)
+                    pygame.draw.rect(screen, glow_color, (st_bg_x, st_bg_y, st_panel_w, st_panel_h), 2, border_radius=6)
                     # Avatar grande
                     if avatar_img is not None:
-                        av_size = int(st_panel_h * 0.75)
+                        av_size = int(st_panel_h * 0.80)
                         av_small = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
                         screen.blit(av_small, (st_bg_x + 12, st_bg_y + (st_panel_h - av_size) // 2))
-                        info_offset = av_size + 25
+                        info_offset = av_size + 20
                     else:
                         info_offset = 15
-                    # Nombre streamer
-                    font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
+                    # Nombre streamer (más grande)
+                    font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.026), bold=True)
                     st_name = font_st_name.render("LEAN FX", True, (0, 220, 255))
-                    screen.blit(st_name, (st_bg_x + info_offset, st_bg_y + int(st_panel_h * 0.15)))
-                    # Stats en una línea + PROFIT
-                    font_st_info = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
-                    st_profit_pct = ((streamer_now['balance'] - 10000) / 10000) * 100
-                    st_profit_str = f"+{st_profit_pct:.1f}%" if st_profit_pct >= 0 else f"{st_profit_pct:.1f}%"
-                    st_info = font_st_info.render(f"Balance: {int(streamer_now['balance'])} FXP  |  {st_profit_str}  |  W:{streamer_now['wins']}  L:{streamer_now['losses']}  |  WR: {st_wr}%", True, (180, 200, 210))
-                    screen.blit(st_info, (st_bg_x + info_offset, st_bg_y + int(st_panel_h * 0.55)))
+                    screen.blit(st_name, (st_bg_x + info_offset, st_bg_y + 5))
+                    # Stats en cajitas separadas
+                    font_st_stat = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
+                    stat_y = st_bg_y + int(st_panel_h * 0.50)
+                    stat_x = st_bg_x + info_offset
+                    stats_data = [
+                        (f"{int(streamer_now['balance'])} FXP", (0, 220, 255)),
+                        (f"{st_profit_pct:+.1f}%", (38, 200, 154) if st_profit_pct >= 0 else (239, 83, 80)),
+                        (f"W:{streamer_now['wins']}", (38, 166, 154)),
+                        (f"L:{streamer_now['losses']}", (239, 83, 80)),
+                        (f"WR:{st_wr}%", (200, 200, 210)),
+                    ]
+                    for i, (stat_text, stat_color) in enumerate(stats_data):
+                        s_txt = font_st_stat.render(stat_text, True, stat_color)
+                        screen.blit(s_txt, (stat_x + i * int(st_panel_w * 0.15), stat_y))
                     # --- LINEA SEPARADORA con gradiente ---
                     sep_y = int(SCREEN_H * 0.20)
                     sep_surface = pygame.Surface((int(SCREEN_W * 0.90), 2), pygame.SRCALPHA)
@@ -1157,9 +1164,9 @@ while app_running:
                     else:
                         months = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
                         next_month = f"1 {months[now.month + 1]} {now.year}"
-                    font_footer = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014))
-                    reset_txt = font_footer.render(f"Reset mensual: {next_month}", True, (50, 70, 90))
-                    screen.blit(reset_txt, reset_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.96))))
+                    font_footer = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                    reset_txt = font_footer.render(f"Reset mensual: {next_month}", True, (80, 120, 150))
+                    screen.blit(reset_txt, reset_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.95))))
                     pygame.display.flip()
                     for r_event in pygame.event.get():
                         if r_event.type == pygame.QUIT:
