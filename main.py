@@ -2198,53 +2198,46 @@ while app_running:
                 if seconds_left <= 5.0 and current_second != last_tick_second and seconds_left > 0:
                     play_sound(sound_tick)
                     last_tick_second = current_second
-                # === OPCIÓN C: Panel lateral tipo notificación (slide desde izquierda) ===
-                slide_progress = min(1.0, (elapsed) / 500.0)  # 500ms para aparecer
-                panel_w = int(SCREEN_W * 0.22)
-                panel_h = int(SCREEN_H * 0.18)
+                # === Mix C+A: Panel lateral con estilo banner (sin "ZONA DETECTADA") ===
+                slide_progress = min(1.0, (elapsed) / 500.0)
+                panel_w = int(SCREEN_W * 0.20)
+                panel_h = int(SCREEN_H * 0.14)
                 panel_x_final = int(SCREEN_W * 0.02)
                 panel_x = int(panel_x_final - (1.0 - slide_progress) * (panel_w + 20))
                 panel_y = int(SCREEN_H * 0.02)
-                # Fondo
+                # Fondo oscuro
                 panel_bg = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-                panel_bg.fill((10, 15, 25, 230))
+                panel_bg.fill((5, 10, 20, 220))
                 screen.blit(panel_bg, (panel_x, panel_y))
-                # Borde izquierdo cyan brillante
-                pygame.draw.rect(screen, (0, 220, 255), (panel_x, panel_y, 4, panel_h))
-                # Borde completo sutil
-                pygame.draw.rect(screen, (0, 100, 130), (panel_x, panel_y, panel_w, panel_h), 1, border_radius=4)
-                # Icono/indicador arriba
-                font_icon = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
-                icon_txt = font_icon.render("ALERTA DE TRADING", True, (0, 200, 220))
-                screen.blit(icon_txt, (panel_x + 12, panel_y + 8))
-                # "ZONA DETECTADA"
-                font_zone_c = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-                zone_txt = font_zone_c.render("ZONA DETECTADA", True, (255, 220, 0))
-                screen.blit(zone_txt, (panel_x + 12, panel_y + int(panel_h * 0.25)))
-                # Timer
-                font_timer_c = pygame.font.SysFont("Arial", int(SCREEN_H * 0.035), bold=True)
-                timer_txt = font_timer_c.render(f"{seconds_left:.1f}s", True, (255, 255, 255))
-                screen.blit(timer_txt, (panel_x + 12, panel_y + int(panel_h * 0.45)))
+                # Borde dorado pulsante
+                border_pulse = int(180 + 60 * math.sin(current_time / 300.0))
+                pygame.draw.rect(screen, (border_pulse, int(border_pulse * 0.75), 0), (panel_x, panel_y, panel_w, panel_h), 2, border_radius=6)
+                # Barra cyan izquierda
+                pygame.draw.rect(screen, (0, 220, 255), (panel_x, panel_y, 3, panel_h))
+                # Timer grande
+                font_timer_mix = pygame.font.SysFont("Arial", int(SCREEN_H * 0.040), bold=True)
+                timer_txt = font_timer_mix.render(f"{seconds_left:.1f}s", True, (255, 255, 255))
+                screen.blit(timer_txt, (panel_x + 12, panel_y + int(panel_h * 0.10)))
                 # Barra de progreso
-                bar_w_c = int(panel_w * 0.85)
-                bar_h_c = 6
-                bar_x_c = panel_x + 12
-                bar_y_c = panel_y + int(panel_h * 0.75)
+                bar_w_m = int(panel_w * 0.85)
+                bar_h_m = 7
+                bar_x_m = panel_x + 12
+                bar_y_m = panel_y + int(panel_h * 0.58)
                 progress = remaining / TIMER_DURATION
-                pygame.draw.rect(screen, (30, 30, 40), (bar_x_c, bar_y_c, bar_w_c, bar_h_c), border_radius=3)
+                pygame.draw.rect(screen, (30, 30, 40), (bar_x_m, bar_y_m, bar_w_m, bar_h_m), border_radius=3)
                 if progress > 0.5:
                     bar_color = (0, 220, 255)
                 elif progress > 0.25:
                     bar_color = (255, 220, 0)
                 else:
                     bar_color = (255, 50, 50)
-                fill_w = int(bar_w_c * progress)
+                fill_w = int(bar_w_m * progress)
                 if fill_w > 0:
-                    pygame.draw.rect(screen, bar_color, (bar_x_c, bar_y_c, fill_w, bar_h_c), border_radius=3)
+                    pygame.draw.rect(screen, bar_color, (bar_x_m, bar_y_m, fill_w, bar_h_m), border_radius=3)
                 # "Escribe BUY o SELL"
-                font_escribe_c = pygame.font.SysFont("Arial", int(SCREEN_H * 0.013))
-                escribe_txt = font_escribe_c.render("Escribe BUY o SELL en el chat", True, (120, 150, 170))
-                screen.blit(escribe_txt, (panel_x + 12, panel_y + int(panel_h * 0.86)))
+                font_escribe_m = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
+                escribe_txt = font_escribe_m.render("ESCRIBE BUY O SELL", True, (150, 180, 200))
+                screen.blit(escribe_txt, (panel_x + 12, panel_y + int(panel_h * 0.76)))
                 # Cuadrito VIEWERS con votos (en la posición de los botones)
                 if viewer_votes:
                     buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
