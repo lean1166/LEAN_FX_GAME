@@ -42,6 +42,14 @@ sound_ambient = load_sound("AMBIENT.mp3")
 sound_game_music = load_sound("GAME_MUSIC.mp3")
 sound_levelup = load_sound("LEVELUP.mp3")  # Sonido cuando alguien sube en TOP 5
 
+# --- CARGAR VOCES DE ZONA (Jorge de México) ---
+zona_voices = []
+for i in range(1, 10):
+    sv = load_sound(f"ZONA_VOZ_{i}.mp3")
+    if sv is not None:
+        zona_voices.append(sv)
+zona_voice_last = -1  # Para no repetir la misma voz 2 veces seguidas
+
 def play_sound(sound):
     if sound is not None and game_started:
         sound.play()
@@ -1468,6 +1476,13 @@ while app_running:
                             zone_timer_start = current_time
                             zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"], "source": "EXTREMO"}
                             zones_mitigated.add(zone_id)
+                            # Reproducir voz aleatoria de zona
+                            if zona_voices:
+                                vi = random.randint(0, len(zona_voices) - 1)
+                                while vi == zona_voice_last and len(zona_voices) > 1:
+                                    vi = random.randint(0, len(zona_voices) - 1)
+                                zona_voice_last = vi
+                                zona_voices[vi].play()
                     # Verificar Decisional
                     if not zone_frozen and active_decisional is not None:
                         zone_id = f"dec_{active_decisional['index']}"
@@ -1476,6 +1491,13 @@ while app_running:
                             zone_timer_start = current_time
                             zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"], "source": "DECISIONAL"}
                             zones_mitigated.add(zone_id)
+                            # Reproducir voz aleatoria de zona
+                            if zona_voices:
+                                vi = random.randint(0, len(zona_voices) - 1)
+                                while vi == zona_voice_last and len(zona_voices) > 1:
+                                    vi = random.randint(0, len(zona_voices) - 1)
+                                zona_voice_last = vi
+                                zona_voices[vi].play()
                     # FVG NO se opera por ahora (solo se dibuja)
                     # if not zone_frozen and active_fvg is not None:
                     #     zone_id = f"fvg_{active_fvg['index']}"
