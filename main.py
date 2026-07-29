@@ -2198,26 +2198,32 @@ while app_running:
                 if seconds_left <= 5.0 and current_second != last_tick_second and seconds_left > 0:
                     play_sound(sound_tick)
                     last_tick_second = current_second
-                # Texto "ZONA DETECTADA"
-                zone_label = font_btn.render("ZONA DETECTADA", True, (255, 255, 0))
-                zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.03)))
-                screen.blit(zone_label, zone_rect)
-                # Texto "ESCRIBE BUY O SELL" para viewers
-                font_escribe = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
-                escribe_txt = font_escribe.render("ESCRIBE BUY O SELL", True, (255, 255, 255))
-                escribe_rect = escribe_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.19)))
-                screen.blit(escribe_txt, escribe_rect)
-                # Timer
-                timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
-                timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.08)))
-                screen.blit(timer_txt, timer_rect)
-                # Barra de progreso del timer
-                bar_w = int(SCREEN_W * 0.25)
-                bar_h = 12
-                bar_x = int(SCREEN_W * 0.35) - bar_w // 2
-                bar_y = int(SCREEN_H * 0.12)
+                # === OPCIÓN A: Banner profesional con fondo + borde ===
+                banner_w = int(SCREEN_W * 0.30)
+                banner_h = int(SCREEN_H * 0.20)
+                banner_x = int(SCREEN_W * 0.35) - banner_w // 2
+                banner_y = int(SCREEN_H * 0.01)
+                # Fondo oscuro
+                banner_bg = pygame.Surface((banner_w, banner_h), pygame.SRCALPHA)
+                banner_bg.fill((5, 10, 20, 220))
+                screen.blit(banner_bg, (banner_x, banner_y))
+                # Borde dorado pulsante
+                border_pulse = int(180 + 60 * math.sin(current_time / 300.0))
+                pygame.draw.rect(screen, (border_pulse, int(border_pulse * 0.75), 0), (banner_x, banner_y, banner_w, banner_h), 2, border_radius=8)
+                # "ZONA DETECTADA" (dorado, arriba)
+                font_zone_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
+                zone_label = font_zone_title.render("ZONA DETECTADA", True, (255, 200, 0))
+                screen.blit(zone_label, zone_label.get_rect(center=(banner_x + banner_w // 2, banner_y + int(banner_h * 0.14))))
+                # Timer grande (centro)
+                timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 255))
+                screen.blit(timer_txt, timer_txt.get_rect(center=(banner_x + banner_w // 2, banner_y + int(banner_h * 0.42))))
+                # Barra de progreso
+                bar_w = int(banner_w * 0.80)
+                bar_h = 10
+                bar_x = banner_x + (banner_w - bar_w) // 2
+                bar_y_pos = banner_y + int(banner_h * 0.65)
                 progress = remaining / TIMER_DURATION
-                pygame.draw.rect(screen, (40, 40, 40), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
+                pygame.draw.rect(screen, (30, 30, 40), (bar_x, bar_y_pos, bar_w, bar_h), border_radius=5)
                 if progress > 0.5:
                     bar_color = (0, 220, 255)
                 elif progress > 0.25:
@@ -2226,8 +2232,12 @@ while app_running:
                     bar_color = (255, 50, 50)
                 fill_w = int(bar_w * progress)
                 if fill_w > 0:
-                    pygame.draw.rect(screen, bar_color, (bar_x, bar_y, fill_w, bar_h), border_radius=6)
-                pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_w, bar_h), 1, border_radius=6)
+                    pygame.draw.rect(screen, bar_color, (bar_x, bar_y_pos, fill_w, bar_h), border_radius=5)
+                pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y_pos, bar_w, bar_h), 1, border_radius=5)
+                # "ESCRIBE BUY O SELL" (blanco, abajo)
+                font_escribe = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
+                escribe_txt = font_escribe.render("ESCRIBE BUY O SELL EN EL CHAT", True, (180, 200, 220))
+                screen.blit(escribe_txt, escribe_txt.get_rect(center=(banner_x + banner_w // 2, banner_y + int(banner_h * 0.85))))
                 # Cuadrito VIEWERS con votos (en la posición de los botones)
                 if viewer_votes:
                     buy_count = sum(1 for v in viewer_votes if v["vote"] == "BUY")
