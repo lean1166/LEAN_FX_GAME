@@ -956,7 +956,7 @@ while app_running:
                     st_panel_w = int(SCREEN_W * 0.62)
                     st_panel_h = int(SCREEN_H * 0.09)
                     st_bg_x = SCREEN_W // 2 - st_panel_w // 2
-                    st_bg_y = int(SCREEN_H * 0.08)
+                    st_bg_y = int(SCREEN_H * 0.065)
                     # Fondo
                     st_bg = pygame.Surface((st_panel_w, st_panel_h), pygame.SRCALPHA)
                     for row in range(st_panel_h):
