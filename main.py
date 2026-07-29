@@ -1474,6 +1474,29 @@ while app_running:
                             voice_freeze_active = True
                             voice_freeze_start = current_time
                 zone_frozen = False
+                # Crear trade de viewers ahora que terminó el timer
+                if viewer_votes and viewer_trade_active is None and zone_detected is not None:
+                    entry_price = current_candle["close"]
+                    current_zone_id = list(zones_mitigated)[-1] if zones_mitigated else ""
+                    viewer_trade_is_extremo = current_zone_id.startswith("ob_")
+                    if zone_detected["type"] == "ALCISTA":
+                        sl_price = zone_detected["low"] - SL_BUFFER
+                        sl_distance = entry_price - sl_price
+                        tp_distance = sl_distance * TP_MULTIPLIER
+                        viewer_trade_active = {
+                            "type": "BUY", "entry": entry_price,
+                            "sl": sl_price, "tp": entry_price + tp_distance,
+                            "entry_index": len(candles),
+                        }
+                    else:
+                        sl_price = zone_detected["high"] + SL_BUFFER
+                        sl_distance = sl_price - entry_price
+                        tp_distance = sl_distance * TP_MULTIPLIER
+                        viewer_trade_active = {
+                            "type": "SELL", "entry": entry_price,
+                            "sl": sl_price, "tp": entry_price - tp_distance,
+                            "entry_index": len(candles),
+                        }
                 zone_detected = None
                 trade_decided = False
                 last_tick_second = -1
@@ -1618,29 +1641,6 @@ while app_running:
                     if not get_player(tv["name"]):
                         create_player(tv["name"])
                 viewer_votes_display = viewer_votes.copy()
-                # Crear trade de viewers si no hay uno activo
-                if zone_detected is not None and viewer_trade_active is None:
-                    entry_price = current_candle["close"]
-                    current_zone_id = list(zones_mitigated)[-1] if zones_mitigated else ""
-                    viewer_trade_is_extremo = current_zone_id.startswith("ob_")
-                    if zone_detected["type"] == "ALCISTA":
-                        sl_price = zone_detected["low"] - SL_BUFFER
-                        sl_distance = entry_price - sl_price
-                        tp_distance = sl_distance * TP_MULTIPLIER
-                        viewer_trade_active = {
-                            "type": "BUY", "entry": entry_price,
-                            "sl": sl_price, "tp": entry_price + tp_distance,
-                            "entry_index": len(candles),
-                        }
-                    else:
-                        sl_price = zone_detected["high"] + SL_BUFFER
-                        sl_distance = sl_price - entry_price
-                        tp_distance = sl_distance * TP_MULTIPLIER
-                        viewer_trade_active = {
-                            "type": "SELL", "entry": entry_price,
-                            "sl": sl_price, "tp": entry_price - tp_distance,
-                            "entry_index": len(candles),
-                        }
         # Bots de backup (solo si TikTok no está conectado o no hay votos reales)
         elif VIEWER_BOTS_ENABLED and game_started and zone_frozen and not tiktok_chat.is_connected():
             if not viewer_votes:
@@ -1653,28 +1653,6 @@ while app_running:
                         vote = random.choice(["BUY", "SELL"])
                         viewer_votes.append({"name": chosen, "vote": vote})
                     viewer_votes_display = viewer_votes.copy()
-                    if zone_detected is not None and viewer_trade_active is None:
-                        entry_price = current_candle["close"]
-                        current_zone_id = list(zones_mitigated)[-1] if zones_mitigated else ""
-                        viewer_trade_is_extremo = current_zone_id.startswith("ob_")
-                        if zone_detected["type"] == "ALCISTA":
-                            sl_price = zone_detected["low"] - SL_BUFFER
-                            sl_distance = entry_price - sl_price
-                            tp_distance = sl_distance * TP_MULTIPLIER
-                            viewer_trade_active = {
-                                "type": "BUY", "entry": entry_price,
-                                "sl": sl_price, "tp": entry_price + tp_distance,
-                                "entry_index": len(candles),
-                            }
-                        else:
-                            sl_price = zone_detected["high"] + SL_BUFFER
-                            sl_distance = sl_price - entry_price
-                            tp_distance = sl_distance * TP_MULTIPLIER
-                            viewer_trade_active = {
-                                "type": "SELL", "entry": entry_price,
-                                "sl": sl_price, "tp": entry_price - tp_distance,
-                                "entry_index": len(candles),
-                            }
         # Cerrar votación cuando se descongela
         if not zone_frozen:
             pygame._viewers_voted_this_zone = False
