@@ -1248,11 +1248,15 @@ while app_running:
                             if config_confirm_reset:
                                 if cfg_event.key == pygame.K_RETURN:
                                     from database import reset_all_players
-                                    reset_all_players()
+                                    try:
+                                        reset_all_players()
+                                    except Exception as e:
+                                        print(f"[ERROR RESET] {e}")
                                     fxp_balance = 10000
                                     wins = 0
                                     losses = 0
                                     trade_history.clear()
+                                    top_viewers = load_top_viewers()
                                     config_confirm_reset = False
                                 elif cfg_event.key == pygame.K_ESCAPE:
                                     config_confirm_reset = False
