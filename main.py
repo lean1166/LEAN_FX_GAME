@@ -83,6 +83,11 @@ total_operations = 0  # Contador de operaciones totales en el stream
 voice_freeze_active = False
 voice_freeze_start = 0
 VOICE_FREEZE_DURATION = 5000  # 5 seg máximo de freeze por voz de resultado
+# --- STREAK SYSTEM ---
+viewer_streaks = {}  # {"username": current_streak_count}
+streak_display = None  # {"name": str, "streak": int, "start_time": ms} activo en pantalla
+STREAK_DISPLAY_DURATION = 4000  # 4 segundos visible
+STREAK_MIN = 2  # Mínimo de wins seguidos para mostrar (2 para testing, 3 para producción)
 
 def play_sound(sound):
     if sound is not None and game_started:
@@ -1791,6 +1796,16 @@ while app_running:
                         voice_freeze_active = True
                         voice_freeze_start = current_time
                 # Refrescar TOP 5 después de resolver
+                # Actualizar streaks
+                correct_dir = viewer_trade_active["type"] if vt_won else ("SELL" if viewer_trade_active["type"] == "BUY" else "BUY")
+                for v in viewer_votes:
+                    won_trade = (vt_won and v["vote"] == viewer_trade_active["type"]) or (vt_lost and v["vote"] != viewer_trade_active["type"])
+                    if won_trade:
+                        viewer_streaks[v["name"]] = viewer_streaks.get(v["name"], 0) + 1
+                        if viewer_streaks[v["name"]] >= STREAK_MIN:
+                            streak_display = {"name": v["name"], "streak": viewer_streaks[v["name"]], "start_time": current_time}
+                    else:
+                        viewer_streaks[v["name"]] = 0
                 top_viewers = load_top_viewers()
                 viewer_trade_active = None
                 viewer_votes = []
@@ -2409,6 +2424,41 @@ while app_running:
                     v_label = font_trade.render("VIEWERS", True, (0, 200, 220))
                     screen.blit(v_label, (line_start_x, sl_y - 18))
             # (Contador de viewers ya está integrado en el panel de arriba)
+        # --- STREAK INDICATOR (3 estilos) ---
+        if streak_display and current_time - streak_display["start_time"] < STREAK_DISPLAY_DURATION:
+            s_name = streak_display["name"]
+            s_count = streak_display["streak"]
+            s_elapsed = current_time - streak_display["start_time"]
+            s_alpha = max(0, 1.0 - (s_elapsed / STREAK_DISPLAY_DURATION) * 0.5)
+            # ESTILO 1: Notificación abajo del gráfico
+            font_streak1 = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
+            streak1_txt = font_streak1.render(f"  {s_name} lleva {s_count} wins seguidos!", True, (255, 200, 0))
+            streak1_bg = pygame.Surface((streak1_txt.get_width() + 20, streak1_txt.get_height() + 10), pygame.SRCALPHA)
+            streak1_bg.fill((20, 10, 0, int(180 * s_alpha)))
+            s1_x = int(SCREEN_W * 0.35) - streak1_bg.get_width() // 2
+            s1_y = int(SCREEN_H * 0.92)
+            screen.blit(streak1_bg, (s1_x, s1_y))
+            pygame.draw.rect(screen, (255, 150, 0), (s1_x, s1_y, streak1_bg.get_width(), streak1_bg.get_height()), 1, border_radius=4)
+            screen.blit(streak1_txt, (s1_x + 10, s1_y + 5))
+            # ESTILO 2: Arriba al lado del panel viewers
+            font_streak2 = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
+            streak2_txt = font_streak2.render(f"{s_name} {s_count} WINS", True, (255, 180, 0))
+            s2_x = int(SCREEN_W * 0.62)
+            s2_y = int(SCREEN_H * 0.02)
+            screen.blit(streak2_txt, (s2_x, s2_y))
+            # ESTILO 3: En el TOP 5 al lado del nombre (si está en el top)
+            for i, viewer in enumerate(top_viewers):
+                if viewer["name"] == s_name:
+                    pos = card_positions[i] if i < len(card_positions) else None
+                    if pos:
+                        fire_x = int(SCREEN_W * pos["name"][0]) + 70
+                        fire_y = int(SCREEN_H * pos["name"][1])
+                        font_fire = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
+                        fire_txt = font_fire.render(f"{s_count}", True, (255, 150, 0))
+                        screen.blit(fire_txt, fire_txt.get_rect(center=(fire_x, fire_y)))
+                    break
+        elif streak_display and current_time - streak_display["start_time"] >= STREAK_DISPLAY_DURATION:
+            streak_display = None
         # --- FLASH AL GANAR/PERDER ---
         if flash_active:
             flash_elapsed = current_time - flash_start_time
