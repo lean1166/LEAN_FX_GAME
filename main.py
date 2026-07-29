@@ -1706,6 +1706,27 @@ while app_running:
                             else:
                                 update_player_balance(v["name"], max(8000, pl["balance"] - TRADE_RISK), loss=True)
                             break
+                # Flash + voz al resolver trade de viewers
+                if vt_won:
+                    flash_active = True
+                    flash_start_time = current_time
+                    flash_color = (38, 166, 154)
+                    flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
+                    total_operations += 1
+                    if voz_win_voices:
+                        random.choice(voz_win_voices).play()
+                        voice_freeze_active = True
+                        voice_freeze_start = current_time
+                else:
+                    flash_active = True
+                    flash_start_time = current_time
+                    flash_color = (239, 83, 80)
+                    flash_text = "LOSS -1%"
+                    total_operations += 1
+                    if voz_loss_voices:
+                        random.choice(voz_loss_voices).play()
+                        voice_freeze_active = True
+                        voice_freeze_start = current_time
                 viewer_trade_active = None
                 viewer_votes = []
                 if active_trade is None:
