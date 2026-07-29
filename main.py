@@ -1448,8 +1448,12 @@ while app_running:
                         # Voz LEAN FX anuncia su trade
                         if bot_decision == "BUY" and lean_buy_voices:
                             random.choice(lean_buy_voices).play()
+                            voice_freeze_active = True
+                            voice_freeze_start = current_time
                         elif bot_decision == "SELL" and lean_sell_voices:
                             random.choice(lean_sell_voices).play()
+                            voice_freeze_active = True
+                            voice_freeze_start = current_time
                 zone_frozen = False
                 zone_detected = None
                 trade_decided = False
