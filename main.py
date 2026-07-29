@@ -1947,6 +1947,11 @@ while app_running:
                 zone_label = font_btn.render("ZONA DETECTADA", True, (255, 255, 0))
                 zone_rect = zone_label.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.03)))
                 screen.blit(zone_label, zone_rect)
+                # Texto "ESCRIBE BUY O SELL" para viewers
+                font_escribe = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
+                escribe_txt = font_escribe.render("ESCRIBE BUY O SELL", True, (255, 255, 255))
+                escribe_rect = escribe_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.19)))
+                screen.blit(escribe_txt, escribe_rect)
                 # Timer
                 timer_txt = font_timer.render(f"{seconds_left:.1f}s", True, (255, 255, 0))
                 timer_rect = timer_txt.get_rect(center=(int(SCREEN_W * 0.35), int(SCREEN_H * 0.08)))
