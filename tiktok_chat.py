@@ -89,46 +89,49 @@ class TikTokChatReader:
 
                 @self.client.on(CommentEvent)
                 async def on_comment(event: CommentEvent):
-                    username = event.user.nickname or event.user.unique_id
-                    unique_id = event.user.unique_id
-                    comment = event.comment.strip().upper()
-                    avatar_url = ""
-                    if hasattr(event.user, 'avatar_jpg') and event.user.avatar_jpg:
-                        avatar_url = event.user.avatar_jpg
-                    elif hasattr(event.user, 'avatar_url') and event.user.avatar_url:
-                        avatar_url = event.user.avatar_url
+                    try:
+                        username = event.user.nickname or str(event.user.id)
+                        unique_id = str(event.user.id)
+                        comment = event.comment.strip().upper()
+                        avatar_url = ""
+                        if hasattr(event.user, 'avatar_jpg') and event.user.avatar_jpg:
+                            avatar_url = event.user.avatar_jpg
+                        elif hasattr(event.user, 'avatar_url') and event.user.avatar_url:
+                            avatar_url = event.user.avatar_url
 
-                    # Guardar todos los comentarios (debug)
-                    self.all_comments.append({
-                        "name": username,
-                        "unique_id": unique_id,
-                        "comment": comment,
-                        "avatar_url": avatar_url,
-                        "time": time.time()
-                    })
-                    # Solo mantener últimos 50
-                    if len(self.all_comments) > 50:
-                        self.all_comments.pop(0)
+                        # Guardar todos los comentarios (debug)
+                        self.all_comments.append({
+                            "name": username,
+                            "unique_id": unique_id,
+                            "comment": comment,
+                            "avatar_url": avatar_url,
+                            "time": time.time()
+                        })
+                        # Solo mantener últimos 50
+                        if len(self.all_comments) > 50:
+                            self.all_comments.pop(0)
 
-                    # Detectar voto BUY/SELL
-                    if self.voting_open:
-                        vote = None
-                        if "BUY" in comment or "COMPRA" in comment or "COMPRAS" in comment or "LARGO" in comment or "LARGOS" in comment or "ALCISTA" in comment:
-                            vote = "BUY"
-                        elif "SELL" in comment or "VENTA" in comment or "VENTAS" in comment or "CORTO" in comment or "CORTOS" in comment or "BAJISTA" in comment:
-                            vote = "SELL"
+                        # Detectar voto BUY/SELL
+                        if self.voting_open:
+                            vote = None
+                            if "BUY" in comment or "COMPRA" in comment or "COMPRAS" in comment or "LARGO" in comment or "LARGOS" in comment or "ALCISTA" in comment:
+                                vote = "BUY"
+                            elif "SELL" in comment or "VENTA" in comment or "VENTAS" in comment or "CORTO" in comment or "CORTOS" in comment or "BAJISTA" in comment:
+                                vote = "SELL"
 
-                        if vote and unique_id not in self.voters_this_zone:
-                            self.voters_this_zone.add(unique_id)
-                            self.votes.append({
-                                "name": username,
-                                "unique_id": unique_id,
-                                "vote": vote,
-                                "avatar_url": avatar_url
-                            })
-                            # Descargar avatar en background
-                            threading.Thread(target=download_avatar, args=(username, avatar_url), daemon=True).start()
-                            print(f"[VOTO] {username} -> {vote}")
+                            if vote and unique_id not in self.voters_this_zone:
+                                self.voters_this_zone.add(unique_id)
+                                self.votes.append({
+                                    "name": username,
+                                    "unique_id": unique_id,
+                                    "vote": vote,
+                                    "avatar_url": avatar_url
+                                })
+                                # Descargar avatar en background
+                                threading.Thread(target=download_avatar, args=(username, avatar_url), daemon=True).start()
+                                print(f"[VOTO] {username} -> {vote}")
+                    except Exception as comment_err:
+                        print(f"[TIKTOK] Error procesando comentario: {comment_err}")
 
                 print(f"[TIKTOK] Conectando a @{self.username}...")
                 await self.client.connect()
