@@ -1691,16 +1691,21 @@ while app_running:
                     # Verificar Order Block activo
                     if active_ob is not None:
                         zone_id = f"ob_{active_ob['index']}"
-                        if zone_id not in zones_mitigated and active_ob["low"] <= price_now <= active_ob["high"]:
+                        # También verificar por precio (evitar reactivar zona similar)
+                        zone_price_id = f"ob_{int(active_ob['high']*10)}_{int(active_ob['low']*10)}"
+                        if zone_id not in zones_mitigated and zone_price_id not in zones_mitigated and active_ob["low"] <= price_now <= active_ob["high"]:
                             zone_frozen = True
                             zone_timer_start = current_time
                             zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"], "source": "EXTREMO"}
                             zones_mitigated.add(zone_id)
+                            zones_mitigated.add(zone_price_id)
                             # Si el Decisional se superpone, mitigarlo también (no activar 2 entradas)
                             if active_decisional is not None:
                                 dec_id = f"dec_{active_decisional['index']}"
+                                dec_price_id = f"dec_{int(active_decisional['high']*10)}_{int(active_decisional['low']*10)}"
                                 if active_decisional["low"] <= price_now <= active_decisional["high"]:
                                     zones_mitigated.add(dec_id)
+                                    zones_mitigated.add(dec_price_id)
                             # Reproducir voz aleatoria de zona
                             if zona_voices:
                                 vi = random.randint(0, len(zona_voices) - 1)
@@ -1711,11 +1716,13 @@ while app_running:
                     # Verificar Decisional
                     if not zone_frozen and active_decisional is not None:
                         zone_id = f"dec_{active_decisional['index']}"
-                        if zone_id not in zones_mitigated and active_decisional["low"] <= price_now <= active_decisional["high"]:
+                        zone_price_id = f"dec_{int(active_decisional['high']*10)}_{int(active_decisional['low']*10)}"
+                        if zone_id not in zones_mitigated and zone_price_id not in zones_mitigated and active_decisional["low"] <= price_now <= active_decisional["high"]:
                             zone_frozen = True
                             zone_timer_start = current_time
                             zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"], "source": "DECISIONAL"}
                             zones_mitigated.add(zone_id)
+                            zones_mitigated.add(zone_price_id)
                             # Reproducir voz aleatoria de zona
                             if zona_voices:
                                 vi = random.randint(0, len(zona_voices) - 1)
