@@ -17,7 +17,11 @@ try:
     SCREEN_W = display_info.current_w
     SCREEN_H = display_info.current_h
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.NOFRAME)
-    pygame.display.set_caption("LEAN FX LIVE")
+    pygame.display.set_caption("LEAN FX GAME")
+    # Icono del juego
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
+    if os.path.exists(icon_path):
+        pygame.display.set_icon(pygame.image.load(icon_path))
 except Exception as e:
     print("[ERROR GRAFICO]:", e)
     sys.exit(1)
