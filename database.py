@@ -4,9 +4,17 @@ Guarda: viewers, balances, wins, losses, historial, configuración
 """
 import sqlite3
 import os
+import sys
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lean_fx_game.db")
+# Si esta corriendo como .exe (PyInstaller), guardar la DB al lado del .exe
+# (persistente), no en la carpeta temporal donde se extraen los archivos.
+if getattr(sys, 'frozen', False):
+    DB_DIR = os.path.dirname(sys.executable)
+else:
+    DB_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DB_PATH = os.path.join(DB_DIR, "lean_fx_game.db")
 
 
 def get_connection():
