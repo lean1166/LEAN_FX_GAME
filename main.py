@@ -2164,8 +2164,18 @@ while app_running:
                     if v_avatar is not None:
                         screen.blit(v_avatar, (avatar_x, ny - v_avatar.get_height() // 2 + 2))
                     # Nombre (arranca a la derecha del avatar, alineado a la izquierda)
+                    # Si es muy largo, reducir el tamaño de fuente
+                    name_text = viewer['name']
+                    max_name_w = int(SCREEN_W * 0.08)  # Ancho máximo para el nombre
+                    name_font_size = int(SCREEN_H * 0.022)
+                    font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
+                    n_txt = font_name_dyn.render(name_text, True, (255, 255, 255))
+                    # Reducir fuente si se sale
+                    while n_txt.get_width() > max_name_w and name_font_size > 10:
+                        name_font_size -= 1
+                        font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
+                        n_txt = font_name_dyn.render(name_text, True, (255, 255, 255))
                     name_start_x = avatar_x + 37
-                    n_txt = font_name_top5.render(viewer['name'], True, (255, 255, 255))
                     screen.blit(n_txt, (name_start_x, ny - n_txt.get_height() // 2))
                     # W
                     w_val = viewer.get('wins', 0)
