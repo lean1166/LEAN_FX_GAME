@@ -174,15 +174,8 @@ check_monthly_reset()
 # Crear jugadores de prueba si la DB está vacía
 db_top = get_top_players(10)
 # Solo crear jugadores si la DB está vacía
-# Crear jugadores de prueba para testing (con avatares)
+# Solo viewers reales - no crear jugadores de prueba
 db_top = get_top_players(10)
-if len(db_top) == 0:
-    test_players = ["crypto_wolf", "trader_mike", "fx_queen", "bull_master", "sniper_pro",
-                    "gold_trader", "scalp_king", "pip_hunter", "chart_ninja", "forex_ace",
-                    "market_shark", "candle_boss", "trend_rider", "zone_master", "pips_lord",
-                    "alpha_trader", "swing_king", "day_trader", "night_owl", "iron_hands"]
-    for p in test_players:
-        create_player(p)
 
 # Cargar top viewers desde DB
 def load_top_viewers():
@@ -312,7 +305,7 @@ bot_hour_start = 0
 bot_bias_active = False  # True cuando el precio tiene sesgo a favor del bot
 bot_bias_direction = 0  # 1 = arriba, -1 = abajo
 # --- BOTS SIMULADOS (viewers falsos que operan para testear el ranking) ---
-VIEWER_BOTS_ENABLED = True  # Activado para testing
+VIEWER_BOTS_ENABLED = False  # Desactivado: solo viewers reales de TikTok
 VIEWER_BOT_INTERVAL = 8000  # (ya no se usa, operan en zona)
 viewer_bot_last_time = 0
 
