@@ -8,7 +8,7 @@ import pygame
 if getattr(sys, 'frozen', False):
     BASE_DIR = sys._MEIPASS
 else:
-    BASE_DIR = BASE_DIR
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 from database import (init_db, get_top_players, get_streamer_stats, 
                       update_player_balance, add_trade_history, 
                       check_monthly_reset, get_config, create_player,
