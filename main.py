@@ -2268,7 +2268,7 @@ while app_running:
                     bar_glow.fill((bar_color[0], bar_color[1], bar_color[2], 30))
                     screen.blit(bar_glow, (bar_x_m, bar_y_m - 3))
                 # "ESCRIBE BUY O SELL" más grande
-                font_escribe_m = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
+                font_escribe_m = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
                 escribe_txt = font_escribe_m.render("ESCRIBE BUY O SELL", True, (0, 200, 220))
                 screen.blit(escribe_txt, (panel_x + 12, panel_y + int(panel_h * 0.78)))
                 # --- PANEL VIEWERS centrado arriba ---
