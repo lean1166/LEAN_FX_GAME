@@ -1686,7 +1686,7 @@ while app_running:
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                 # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
-                if active_trade is None and not zone_frozen and viewer_trade_active is None:
+                if active_trade is None and not zone_frozen and viewer_trade_active is None and not voice_freeze_active:
                     price_now = current_candle["close"]
                     # Verificar Order Block activo
                     if active_ob is not None:
@@ -1784,15 +1784,15 @@ while app_running:
             if vt_won or vt_lost:
                 correct_dir = viewer_trade_active["type"]
                 for v in viewer_votes:
-                    p = get_top_players(10)
-                    for pl in p:
-                        if pl["username"] == v["name"]:
-                            if (vt_won and v["vote"] == correct_dir) or (vt_lost and v["vote"] != correct_dir):
-                                gain = int(TRADE_RISK * TP_MULTIPLIER)
-                                update_player_balance(v["name"], pl["balance"] + gain, win=True)
-                            else:
-                                update_player_balance(v["name"], max(8000, pl["balance"] - TRADE_RISK), loss=True)
-                            break
+                    # Buscar player directamente por nombre
+                    from database import get_player
+                    pl = get_player(v["name"])
+                    if pl:
+                        if (vt_won and v["vote"] == correct_dir) or (vt_lost and v["vote"] != correct_dir):
+                            gain = int(TRADE_RISK * TP_MULTIPLIER)
+                            update_player_balance(v["name"], pl["balance"] + gain, win=True)
+                        else:
+                            update_player_balance(v["name"], max(8000, pl["balance"] - TRADE_RISK), loss=True)
                 # Flash + voz al resolver trade de viewers
                 if vt_won:
                     flash_active = True
@@ -1898,7 +1898,7 @@ while app_running:
                 distance = total_len - range_low_index
                 if distance > needed_count and distance < 120:
                     needed_count = distance + 10
-        needed_count = max(50, min(needed_count, 150))
+        needed_count = max(50, min(needed_count, 100))
         new_target = float(needed_count)
         # Sonido de ZOOM cuando el zoom cambia significativamente
         if abs(new_target - target_visible_count) > 15:
