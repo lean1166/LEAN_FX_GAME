@@ -113,9 +113,9 @@ class TikTokChatReader:
                     # Detectar voto BUY/SELL
                     if self.voting_open:
                         vote = None
-                        if "BUY" in comment or "COMPRA" in comment or "COMPRAS" in comment or "LARGO" in comment or "LARGOS" in comment:
+                        if "BUY" in comment or "COMPRA" in comment or "COMPRAS" in comment or "LARGO" in comment or "LARGOS" in comment or "ALCISTA" in comment:
                             vote = "BUY"
-                        elif "SELL" in comment or "VENTA" in comment or "VENTAS" in comment or "CORTO" in comment or "CORTOS" in comment:
+                        elif "SELL" in comment or "VENTA" in comment or "VENTAS" in comment or "CORTO" in comment or "CORTOS" in comment or "BAJISTA" in comment:
                             vote = "SELL"
 
                         if vote and unique_id not in self.voters_this_zone:
