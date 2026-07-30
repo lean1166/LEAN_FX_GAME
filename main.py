@@ -2238,6 +2238,14 @@ while app_running:
                         wr_txt = font_stat_top5.render("-", True, (100, 100, 120))
                     wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * pos["wr"][0]), int(SCREEN_H * pos["wr"][1])))
                     screen.blit(wr_txt, wr_rect)
+                    # Balance FXP (al lado derecho del nombre)
+                    bal_val = viewer.get('balance', 10000)
+                    font_bal_top5 = pygame.font.SysFont("Arial", max(10, int(SCREEN_H * 0.014)), bold=True)
+                    bal_color = (0, 200, 220) if bal_val >= 10000 else (200, 100, 100)
+                    bal_txt = font_bal_top5.render(f"{int(bal_val)} FXP", True, bal_color)
+                    bal_x = int(SCREEN_W * pos["name"][0]) + 75
+                    bal_y = int(SCREEN_H * pos["name"][1])
+                    screen.blit(bal_txt, (bal_x, bal_y - bal_txt.get_height() // 2))
             # --- PANEL VIEWERS (arriba centro, donde estaban los botones) ---
             btn_x = int(SCREEN_W * 0.35)
             btn_y = int(SCREEN_H * 0.03)
