@@ -884,6 +884,8 @@ while app_running:
                     sound_ambient.stop()
                 # Iniciar playlist de música
                 if music_playlist:
+                    random.shuffle(music_playlist)
+                    music_current_index = 0
                     pygame.mixer.music.load(music_playlist[music_current_index])
                     pygame.mixer.music.set_volume(0.3)
                     pygame.mixer.music.play()
