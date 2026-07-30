@@ -408,6 +408,12 @@ def find_decisional(candles_list, bos_index, bos_type, extreme_index):
                 return {"high": c["high"], "low": c["low"], "index": i}
     return None
 
+def zonas_se_solapan(zona_a, zona_b):
+    """Devuelve True si los rangos de precio [low, high] de dos zonas se solapan/tocan."""
+    if zona_a is None or zona_b is None:
+        return False
+    return zona_a["low"] <= zona_b["high"] and zona_b["low"] <= zona_a["high"]
+
 def find_fvg(candles_list, start_idx, end_idx, bos_type):
     if end_idx - start_idx < 3:
         return None
@@ -461,7 +467,7 @@ def process_new_candle(candles_list, new_index):
         dec = find_decisional(candles_list, new_index, "BAJISTA", range_high_index)
         if dec is not None:
             dec["type"] = "BAJISTA"
-            if active_ob and dec["index"] == active_ob["index"]:
+            if active_ob and (dec["index"] == active_ob["index"] or zonas_se_solapan(dec, active_ob)):
                 dec = None
         active_decisional = dec
         active_fvg = find_fvg(candles_list, range_high_index, new_index, "BAJISTA")
@@ -497,7 +503,7 @@ def process_new_candle(candles_list, new_index):
         dec = find_decisional(candles_list, new_index, "ALCISTA", range_low_index)
         if dec is not None:
             dec["type"] = "ALCISTA"
-            if active_ob and dec["index"] == active_ob["index"]:
+            if active_ob and (dec["index"] == active_ob["index"] or zonas_se_solapan(dec, active_ob)):
                 dec = None
         active_decisional = dec
         active_fvg = find_fvg(candles_list, range_low_index, new_index, "ALCISTA")
@@ -591,7 +597,7 @@ def process_new_candle(candles_list, new_index):
             dec = find_decisional(candles_list, new_index, "ALCISTA", range_low_index)
             if dec is not None:
                 dec["type"] = "ALCISTA"
-                if active_ob and dec["index"] == active_ob["index"]:
+                if active_ob and (dec["index"] == active_ob["index"] or zonas_se_solapan(dec, active_ob)):
                     dec = None
             active_decisional = dec
             active_fvg = find_fvg(candles_list, range_low_index, new_index, "ALCISTA")
@@ -621,7 +627,7 @@ def process_new_candle(candles_list, new_index):
             dec = find_decisional(candles_list, new_index, "BAJISTA", range_high_index)
             if dec is not None:
                 dec["type"] = "BAJISTA"
-                if active_ob and dec["index"] == active_ob["index"]:
+                if active_ob and (dec["index"] == active_ob["index"] or zonas_se_solapan(dec, active_ob)):
                     dec = None
             active_decisional = dec
             active_fvg = find_fvg(candles_list, range_high_index, new_index, "BAJISTA")
