@@ -228,6 +228,28 @@ init_db()
 
 
 
+def get_recent_results(username, limit=20):
+    """
+    Obtener los resultados (WIN/LOSS) más recientes de un jugador, del más
+    nuevo al más viejo. Usado por window_streamer.py para calcular la racha
+    actual sin depender del trade_history en memoria de main.py (que vive en
+    otro proceso).
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    player = get_player(username)
+    if not player:
+        conn.close()
+        return []
+    c.execute("""SELECT result FROM trade_history
+                 WHERE player_id = ?
+                 ORDER BY id DESC
+                 LIMIT ?""", (player["id"], limit))
+    rows = c.fetchall()
+    conn.close()
+    return [r["result"] for r in rows]
+
+
 def get_all_players_ranked():
     """Obtener todos los jugadores ordenados por balance (excluyendo streamer)"""
     conn = get_connection()

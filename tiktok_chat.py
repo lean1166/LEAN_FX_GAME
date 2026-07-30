@@ -10,9 +10,7 @@ import time
 import os
 import urllib.request
 
-# Carpeta de avatares
-AVATARS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "avatars")
-os.makedirs(AVATARS_DIR, exist_ok=True)
+from shared_paths import AVATARS_DIR
 
 def download_avatar(username, url):
     """Descarga avatar de TikTok y lo guarda localmente"""

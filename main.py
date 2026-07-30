@@ -4,16 +4,17 @@ import random
 import math
 import pygame
 
-# Detectar si estamos corriendo desde PyInstaller
-if getattr(sys, 'frozen', False):
-    BASE_DIR = sys._MEIPASS
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-from database import (init_db, get_top_players, get_streamer_stats, 
-                      update_player_balance, add_trade_history, 
-                      check_monthly_reset, get_config, create_player,
-                      get_all_players_ranked)
-from tiktok_chat import TikTokChatReader, TIKTOK_AVAILABLE
+from shared_paths import BASE_DIR, SOUND_DIR, PROFILE_DIR, find_asset, find_profile_image
+from database import (get_top_players, get_streamer_stats,
+                      update_player_balance, add_trade_history,
+                      check_monthly_reset, get_config, create_player)
+from tiktok_chat import TikTokChatReader
+
+# NOTA (arquitectura multi-ventana V2): main.py ya NO dibuja el panel del
+# streamer ni el TOP 5 / ranking. Esas ventanas viven en window_streamer.py
+# y window_ranking.py (procesos separados, para poder capturarlas como
+# fuentes independientes en OBS). main.py sigue siendo el único dueño del
+# audio y de la conexión al chat de TikTok. Lanzarlos juntos con launcher.py.
 
 try:
     pygame.init()
@@ -29,18 +30,14 @@ except Exception as e:
     sys.exit(1)
 
 # Icono del juego (fuera del try principal para que no crashee)
-icon_path = os.path.join(BASE_DIR, "assets", "icon.png")
-if not os.path.exists(icon_path):
-    icon_path = os.path.join(BASE_DIR, "assets", "icon.ico")
-if os.path.exists(icon_path):
+icon_path = find_asset("icon.png", "icon.ico")
+if icon_path:
     try:
         pygame.display.set_icon(pygame.image.load(icon_path))
     except:
         print("[AVISO] No se pudo cargar el icono")
 
 # --- CARGAR SONIDOS ---
-SOUND_DIR = os.path.join(BASE_DIR, "assets", "sound")
-
 def load_sound(filename):
     path = os.path.join(SOUND_DIR, filename)
     if os.path.exists(path):
@@ -146,54 +143,19 @@ font_hud_val = pygame.font.SysFont("Arial", 22, bold=True)
 font_bos = pygame.font.SysFont("Arial", 16, bold=True)
 font_ob = pygame.font.SysFont("Consolas", 13, bold=True)
 
-# --- CARGAR AVATAR ---
-PROFILE_DIR = os.path.join(BASE_DIR, "assets", "profile")
+# --- CARGAR AVATAR DEL STREAMER ---
+# Nota: window_streamer.py carga esta misma imagen por su cuenta (es un
+# proceso separado); main.py ya no dibuja el panel del streamer, pero
+# mantenemos avatar_img aquí por si en el futuro se necesita en el gráfico.
 avatar_img = None
-# Buscar cualquier imagen en la carpeta profile
-if os.path.exists(PROFILE_DIR):
-    for f in os.listdir(PROFILE_DIR):
-        if f.lower().endswith((".png", ".jpg", ".jpeg")):
-            avatar_img = pygame.image.load(os.path.join(PROFILE_DIR, f)).convert_alpha()
-            avatar_img = pygame.transform.smoothscale(avatar_img, (200, 200))
-            break
-if avatar_img is None:
+_profile_path = find_profile_image()
+if _profile_path:
+    avatar_img = pygame.image.load(_profile_path).convert_alpha()
+    avatar_img = pygame.transform.smoothscale(avatar_img, (200, 200))
+else:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
 
-# --- SISTEMA DE AVATARES DE VIEWERS (circulitos) ---
-AVATARS_DIR = os.path.join(BASE_DIR, "assets", "avatars")
-os.makedirs(AVATARS_DIR, exist_ok=True)
-viewer_avatar_cache = {}  # Cache: {"username": pygame.Surface}
-
-def get_viewer_avatar(username, size=24):
-    """Cargar avatar de viewer como circulito. Retorna Surface o None"""
-    if username in viewer_avatar_cache:
-        return viewer_avatar_cache[username]
-    # Buscar archivo
-    for ext in [".png", ".jpg", ".jpeg"]:
-        filepath = os.path.join(AVATARS_DIR, f"{username}{ext}")
-        if os.path.exists(filepath):
-            try:
-                img = pygame.image.load(filepath).convert_alpha()
-                img = pygame.transform.smoothscale(img, (size, size))
-                # Recortar en circulo
-                circle_surface = pygame.Surface((size, size), pygame.SRCALPHA)
-                pygame.draw.circle(circle_surface, (255, 255, 255), (size // 2, size // 2), size // 2)
-                # Usar el circulo como máscara
-                final = pygame.Surface((size, size), pygame.SRCALPHA)
-                for x in range(size):
-                    for y in range(size):
-                        if circle_surface.get_at((x, y))[3] > 0:
-                            final.set_at((x, y), img.get_at((x, y)))
-                # Borde del circulo
-                pygame.draw.circle(final, (0, 180, 220), (size // 2, size // 2), size // 2, 2)
-                viewer_avatar_cache[username] = final
-                return final
-            except Exception as e:
-                print(f"[AVATAR] Error cargando {username}: {e}")
-                viewer_avatar_cache[username] = None
-                return None
-    viewer_avatar_cache[username] = None
-    return None
+# get_viewer_avatar() ahora viene de avatar_utils.py (compartido con window_ranking.py)
 
 # --- TOP 5 VIEWERS (desde base de datos) ---
 font_top = pygame.font.SysFont("Arial", 14, bold=True)
@@ -220,34 +182,30 @@ def load_top_viewers():
     return viewers
 
 top_viewers = load_top_viewers()
-# --- SISTEMA DE ANIMACIÓN TOP 5 (detectar cambios de posición) ---
-top5_prev_order = [v["name"] for v in top_viewers]  # Orden anterior
-top5_highlights = {}  # {"nombre": {"type": "up"/"down", "start_time": ms}}
-TOP5_HIGHLIGHT_DURATION = 2500  # 2.5 segundos de animación
+# --- SONIDO LEVELUP cuando alguien sube en el TOP 5 ---
+# (El dibujo visual del TOP 5 y sus flechitas +/- ahora vive en window_ranking.py,
+# ese proceso no tiene audio propio, así que main.py sigue chequeando el orden
+# solo para decidir cuándo reproducir el sonido)
+top5_prev_order = [v["name"] for v in top_viewers]
 top5_last_refresh = 0
-TOP5_REFRESH_INTERVAL = 3000  # Refrescar cada 3 segundos
+TOP5_REFRESH_INTERVAL = 3000  # Chequear cada 3 segundos
 
-def refresh_top5_with_tracking(current_time):
-    """Refresca top_viewers y detecta cambios de posición"""
-    global top_viewers, top5_prev_order, top5_highlights
+def check_top5_levelup_sound(current_time):
+    """Refresca top_viewers y reproduce LEVELUP.mp3 si alguien subió de posición"""
+    global top_viewers, top5_prev_order
     new_viewers = load_top_viewers()
     new_order = [v["name"] for v in new_viewers]
-    # Detectar quién subió y quién bajó
     someone_moved_up = False
     for name in new_order:
         if name in top5_prev_order:
-            old_pos = top5_prev_order.index(name)
-            new_pos = new_order.index(name)
-            if new_pos < old_pos:
-                top5_highlights[name] = {"type": "up", "start_time": current_time}
+            if new_order.index(name) < top5_prev_order.index(name):
                 someone_moved_up = True
-            elif new_pos > old_pos:
-                top5_highlights[name] = {"type": "down", "start_time": current_time}
         else:
-            top5_highlights[name] = {"type": "up", "start_time": current_time}
             someone_moved_up = True
     if someone_moved_up and sound_levelup is not None and game_started:
         sound_levelup.play()
+    top5_prev_order = new_order
+    top_viewers = new_viewers
     top5_prev_order = new_order
     top_viewers = new_viewers
 # Cargar stats del streamer desde DB
@@ -773,7 +731,6 @@ while app_running:
     btn_w = int(SCREEN_W * 0.28)
     btn_h = int(SCREEN_H * 0.08)
     btn_iniciar = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (341/768)) - btn_h // 2, btn_w, btn_h)
-    btn_ranking = pygame.Rect(int(SCREEN_W * (686/1366)) - btn_w // 2, int(SCREEN_H * (476/768)) - btn_h // 2, btn_w, btn_h)
     btn_config = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (607/768)) - btn_h // 2, btn_w, btn_h)
 
     # --- MENÚ ---
@@ -887,9 +844,6 @@ while app_running:
                 if btn_iniciar.collidepoint(mx, my):
                     menu_click_btn = "iniciar"
                     menu_click_time = current_time
-                elif btn_ranking.collidepoint(mx, my):
-                    menu_click_btn = "ranking"
-                    menu_click_time = current_time
                 elif btn_config.collidepoint(mx, my):
                     menu_click_btn = "config"
                     menu_click_time = current_time
@@ -912,356 +866,6 @@ while app_running:
                 elif sound_game_music is not None:
                     sound_game_music.set_volume(0.3)
                     sound_game_music.play(loops=-1)
-            elif menu_click_btn == "ranking":
-                # Pantalla de RANKING MEJORADA
-                in_ranking = True
-                ranking_scroll = 0
-                ranking_enter_time = pygame.time.get_ticks()
-                # Partículas del ranking
-                rank_particles = []
-                for _ in range(25):
-                    rank_particles.append({
-                        "x": random.randint(0, SCREEN_W),
-                        "y": random.randint(0, SCREEN_H),
-                        "speed": random.uniform(0.2, 0.8),
-                        "size": random.randint(1, 3),
-                        "alpha": random.randint(40, 120),
-                    })
-                # Velas japonesas de fondo (animadas)
-                rank_candles = []
-                for _ in range(12):
-                    rank_candles.append({
-                        "x": random.randint(0, SCREEN_W),
-                        "y": random.randint(int(SCREEN_H * 0.2), int(SCREEN_H * 0.9)),
-                        "w": random.randint(8, 14),
-                        "h": random.randint(30, 100),
-                        "color": random.choice([(38, 166, 154), (239, 83, 80)]),
-                        "speed": random.uniform(0.3, 0.8),
-                    })
-                while in_ranking:
-                    clock.tick(60)
-                    current_time = pygame.time.get_ticks()
-                    time_in_ranking = current_time - ranking_enter_time
-                    screen.fill((8, 12, 20))
-                    # --- PARTICULAS DE FONDO ---
-                    for p in rank_particles:
-                        p["y"] -= p["speed"]
-                        if p["y"] < -5:
-                            p["y"] = SCREEN_H + 5
-                            p["x"] = random.randint(0, SCREEN_W)
-                        ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
-                        pygame.draw.circle(ps, (0, 180, 220, p["alpha"]), (p["size"], p["size"]), p["size"])
-                        screen.blit(ps, (int(p["x"]), int(p["y"])))
-                    # --- VELAS JAPONESAS DE FONDO (baja opacidad) ---
-                    candle_bg_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-                    for rc in rank_candles:
-                        rc["x"] -= rc["speed"]
-                        if rc["x"] < -20:
-                            rc["x"] = SCREEN_W + 20
-                            rc["y"] = random.randint(int(SCREEN_H * 0.2), int(SCREEN_H * 0.9))
-                            rc["h"] = random.randint(30, 100)
-                        col = (rc["color"][0], rc["color"][1], rc["color"][2], 30)
-                        pygame.draw.rect(candle_bg_surface, col, (int(rc["x"]), int(rc["y"]), rc["w"], rc["h"]))
-                        # Mecha
-                        wick_col = (rc["color"][0], rc["color"][1], rc["color"][2], 20)
-                        cx = int(rc["x"]) + rc["w"] // 2
-                        pygame.draw.line(candle_bg_surface, wick_col, (cx, int(rc["y"]) - 12), (cx, int(rc["y"])), 1)
-                        pygame.draw.line(candle_bg_surface, wick_col, (cx, int(rc["y"]) + rc["h"]), (cx, int(rc["y"]) + rc["h"] + 12), 1)
-                    screen.blit(candle_bg_surface, (0, 0))
-                    # --- TITULO con sombra/glow ---
-                    font_rank_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.055), bold=True)
-                    # Sombra
-                    title_shadow = font_rank_title.render("RANKING GENERAL", True, (0, 80, 100))
-                    screen.blit(title_shadow, title_shadow.get_rect(center=(SCREEN_W // 2 + 2, int(SCREEN_H * 0.04) + 2)))
-                    # Texto principal
-                    rank_title = font_rank_title.render("RANKING GENERAL", True, (0, 220, 255))
-                    screen.blit(rank_title, rank_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.04))))
-                    # Total jugadores arriba derecha (pegado como EN VIVO)
-                    all_players = get_all_players_ranked()
-                    font_total = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-                    total_txt = font_total.render(f"{len(all_players)} jugadores activos", True, (0, 200, 220))
-                    screen.blit(total_txt, (SCREEN_W - total_txt.get_width() - int(SCREEN_W * 0.03), int(SCREEN_H * 0.03)))
-                    # --- INDICADOR EN VIVO (más grande) ---
-                    live_x = int(SCREEN_W * 0.03)
-                    live_y = int(SCREEN_H * 0.04)
-                    live_pulse = int(8 + 3 * math.sin(current_time / 300.0))
-                    live_alpha = int(180 + 75 * math.sin(current_time / 300.0))
-                    live_glow = pygame.Surface((live_pulse * 4, live_pulse * 4), pygame.SRCALPHA)
-                    pygame.draw.circle(live_glow, (0, 255, 80, 40), (live_pulse * 2, live_pulse * 2), live_pulse * 2)
-                    screen.blit(live_glow, (live_x - live_pulse * 2, live_y - live_pulse * 2))
-                    pygame.draw.circle(screen, (0, min(255, live_alpha + 50), 80), (live_x, live_y), live_pulse)
-                    font_live = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-                    live_txt = font_live.render("EN VIVO", True, (0, 220, 100))
-                    screen.blit(live_txt, (live_x + 14, live_y - live_txt.get_height() // 2))
-                    # --- PANEL STREAMER PROFESIONAL ---
-                    streamer_now = get_streamer_stats()
-                    st_total = streamer_now["wins"] + streamer_now["losses"]
-                    st_wr = int((streamer_now["wins"] / st_total * 100)) if st_total > 0 else 0
-                    st_profit_pct = ((streamer_now['balance'] - 10000) / 10000) * 100
-                    st_panel_w = int(SCREEN_W * 0.62)
-                    st_panel_h = int(SCREEN_H * 0.09)
-                    st_bg_x = SCREEN_W // 2 - st_panel_w // 2
-                    st_bg_y = int(SCREEN_H * 0.08)
-                    # Fondo
-                    st_bg = pygame.Surface((st_panel_w, st_panel_h), pygame.SRCALPHA)
-                    for row in range(st_panel_h):
-                        alpha = int(130 + 30 * (row / st_panel_h))
-                        pygame.draw.line(st_bg, (0, 20, 40, alpha), (0, row), (st_panel_w, row))
-                    screen.blit(st_bg, (st_bg_x, st_bg_y))
-                    glow_alpha = int(180 + 60 * math.sin(current_time / 500.0))
-                    pygame.draw.rect(screen, (0, min(255, glow_alpha), 220), (st_bg_x, st_bg_y, st_panel_w, st_panel_h), 2, border_radius=6)
-                    # Avatar + Nombre (centro-izquierda)
-                    if avatar_img is not None:
-                        av_size = int(st_panel_h * 0.60)
-                        av_small = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
-                        screen.blit(av_small, (st_bg_x + 10, st_bg_y + (st_panel_h - av_size) // 2))
-                        name_x = st_bg_x + 10 + av_size + 8
-                    else:
-                        name_x = st_bg_x + 12
-                    font_st_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
-                    st_name = font_st_name.render("LEAN FX", True, (0, 220, 255))
-                    screen.blit(st_name, (name_x, st_bg_y + (st_panel_h - st_name.get_height()) // 2))
-                    # Cajitas de stats (al lado derecho del nombre)
-                    font_st_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.013), bold=True)
-                    font_st_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
-                    box_h = int(st_panel_h * 0.75)
-                    box_w = int(st_panel_w * 0.12)
-                    box_gap = int(st_panel_w * 0.01)
-                    box_start_x = name_x + st_name.get_width() + 20
-                    box_y = st_bg_y + (st_panel_h - box_h) // 2
-                    stats_boxes = [
-                        ("BALANCE", f"{int(streamer_now['balance'])}", (0, 220, 255)),
-                        ("PROFIT", f"{st_profit_pct:+.1f}%", (38, 200, 154) if st_profit_pct >= 0 else (239, 83, 80)),
-                        ("WINS", f"{streamer_now['wins']}", (38, 166, 154)),
-                        ("LOSSES", f"{streamer_now['losses']}", (239, 83, 80)),
-                        ("WIN RATE", f"{st_wr}%", (200, 200, 220)),
-                    ]
-                    for i, (label, value, color) in enumerate(stats_boxes):
-                        bx = box_start_x + i * (box_w + box_gap)
-                        box_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-                        box_surf.fill((0, 20, 35, 150))
-                        screen.blit(box_surf, (bx, box_y))
-                        pygame.draw.rect(screen, (0, 80, 100), (bx, box_y, box_w, box_h), 1, border_radius=3)
-                        lbl = font_st_label.render(label, True, (100, 140, 160))
-                        screen.blit(lbl, lbl.get_rect(center=(bx + box_w // 2, box_y + 10)))
-                        val = font_st_val.render(value, True, color)
-                        screen.blit(val, val.get_rect(center=(bx + box_w // 2, box_y + box_h // 2 + 4)))
-                    # --- LINEA SEPARADORA con gradiente ---
-                    sep_y = int(SCREEN_H * 0.20)
-                    sep_surface = pygame.Surface((int(SCREEN_W * 0.90), 2), pygame.SRCALPHA)
-                    for sx in range(int(SCREEN_W * 0.90)):
-                        dist = abs(sx - int(SCREEN_W * 0.45)) / (SCREEN_W * 0.45)
-                        alpha = int(150 * (1 - dist))
-                        pygame.draw.line(sep_surface, (0, 180, 220, alpha), (sx, 0), (sx, 1))
-                    screen.blit(sep_surface, (int(SCREEN_W * 0.05), sep_y))
-                    # Headers
-                    headers = ["#", "JUGADOR", "BALANCE (FXP)", "PROFIT", "W", "L", "WIN RATE"]
-                    hx_positions = [0.05, 0.10, 0.30, 0.42, 0.52, 0.59, 0.67]
-                    font_header = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
-                    header_y = int(SCREEN_H * 0.22)
-                    for i, h in enumerate(headers):
-                        h_txt = font_header.render(h, True, (120, 160, 180))
-                        screen.blit(h_txt, (int(SCREEN_W * hx_positions[i]), header_y))
-                    # Underline debajo de headers
-                    underline_y = header_y + int(SCREEN_H * 0.022)
-                    underline_surf = pygame.Surface((int(SCREEN_W * 0.92), 1), pygame.SRCALPHA)
-                    for ux in range(int(SCREEN_W * 0.92)):
-                        dist = abs(ux - int(SCREEN_W * 0.46)) / (SCREEN_W * 0.46)
-                        alpha = int(100 * (1 - dist))
-                        pygame.draw.line(underline_surf, (0, 150, 180, alpha), (ux, 0), (ux, 0))
-                    screen.blit(underline_surf, (int(SCREEN_W * 0.04), underline_y))
-                    # --- BARRA LATERAL DECORATIVA CYAN con glow ---
-                    bar_deco_x = int(SCREEN_W * 0.035)
-                    bar_deco_y1 = int(SCREEN_H * 0.25)
-                    bar_deco_y2 = int(SCREEN_H * 0.93)
-                    # Glow (barra ancha semitransparente)
-                    glow_bar = pygame.Surface((8, bar_deco_y2 - bar_deco_y1), pygame.SRCALPHA)
-                    glow_bar.fill((0, 180, 220, 25))
-                    screen.blit(glow_bar, (bar_deco_x - 3, bar_deco_y1))
-                    # Barra fina principal
-                    pygame.draw.line(screen, (0, 180, 220, 180), (bar_deco_x, bar_deco_y1), (bar_deco_x, bar_deco_y2), 2)
-                    # --- DIBUJAR FILAS (mejoradas v2) ---
-                    row_h = int(SCREEN_H * 0.065)
-                    visible_rows = 10
-                    start_y = int(SCREEN_H * 0.26)
-                    font_row_name = pygame.font.SysFont("Arial", int(SCREEN_H * 0.024), bold=True)
-                    font_row_stat = pygame.font.SysFont("Arial", int(SCREEN_H * 0.020), bold=True)
-                    for idx in range(min(visible_rows, len(all_players) - ranking_scroll)):
-                        p_idx = idx + ranking_scroll
-                        if p_idx >= len(all_players):
-                            break
-                        p = all_players[p_idx]
-                        # Animación cascada: cada fila aparece con delay
-                        row_delay = idx * 80
-                        row_alpha_factor = min(1.0, max(0.0, (time_in_ranking - row_delay) / 300.0))
-                        if row_alpha_factor <= 0:
-                            continue
-                        ry = start_y + (idx * row_h)
-                        # Slide desde la derecha
-                        slide_offset = int((1.0 - row_alpha_factor) * 60)
-                        row_x_base = int(SCREEN_W * 0.045) + slide_offset
-                        row_width = int(SCREEN_W * 0.92)
-                        # Fondo de fila
-                        row_bg = pygame.Surface((row_width, row_h - 3), pygame.SRCALPHA)
-                        # Degradado de opacidad: filas más abajo se ven más tenues
-                        fade_factor = max(0.4, 1.0 - (p_idx * 0.06)) if p_idx >= 3 else 1.0
-                        if p_idx == 0:
-                            for ry_line in range(row_h - 3):
-                                g_alpha = int(row_alpha_factor * (70 + 40 * (ry_line / (row_h - 3))))
-                                pygame.draw.line(row_bg, (60, 50, 0, g_alpha), (0, ry_line), (row_width, ry_line))
-                        elif p_idx == 1:
-                            row_bg.fill((30, 30, 40, int(row_alpha_factor * 100)))
-                        elif p_idx == 2:
-                            row_bg.fill((35, 25, 15, int(row_alpha_factor * 90)))
-                        elif idx % 2 == 0:
-                            row_bg.fill((18, 22, 35, int(row_alpha_factor * 100 * fade_factor)))
-                        else:
-                            row_bg.fill((12, 15, 25, int(row_alpha_factor * 70 * fade_factor)))
-                        screen.blit(row_bg, (row_x_base, ry))
-                        # --- HIGHLIGHT #1: borde dorado completo + brillo ---
-                        if p_idx == 0:
-                            # Borde dorado completo alrededor de la fila
-                            gold_pulse = int(200 + 55 * math.sin(current_time / 400.0))
-                            pygame.draw.rect(screen, (gold_pulse, int(gold_pulse * 0.84), 0), (row_x_base, ry, row_width, row_h - 3), 2, border_radius=3)
-                            # Glow exterior
-                            glow_s = pygame.Surface((row_width + 6, row_h + 1), pygame.SRCALPHA)
-                            glow_s.fill((255, 215, 0, 15))
-                            screen.blit(glow_s, (row_x_base - 3, ry - 2))
-                        elif p_idx == 1:
-                            pygame.draw.rect(screen, (192, 192, 192), (row_x_base, ry, 4, row_h - 3))
-                        elif p_idx == 2:
-                            pygame.draw.rect(screen, (205, 127, 50), (row_x_base, ry, 4, row_h - 3))
-                        # --- MEDALLA: circulo dorado para #1, numeros para el resto ---
-                        medal_cx = int(SCREEN_W * hx_positions[0]) + slide_offset + 12
-                        medal_cy = ry + (row_h - 3) // 2
-                        if p_idx == 0:
-                            # Circulo dorado con "1" adentro
-                            pygame.draw.circle(screen, (255, 215, 0), (medal_cx, medal_cy), int(SCREEN_H * 0.014))
-                            pygame.draw.circle(screen, (200, 160, 0), (medal_cx, medal_cy), int(SCREEN_H * 0.014), 2)
-                            one_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.016), bold=True)
-                            one_txt = one_font.render("1", True, (40, 20, 0))
-                            screen.blit(one_txt, one_txt.get_rect(center=(medal_cx, medal_cy)))
-                        elif p_idx == 1:
-                            pygame.draw.circle(screen, (192, 192, 192), (medal_cx, medal_cy), int(SCREEN_H * 0.012))
-                            two_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
-                            two_txt = two_font.render("2", True, (30, 30, 30))
-                            screen.blit(two_txt, two_txt.get_rect(center=(medal_cx, medal_cy)))
-                        elif p_idx == 2:
-                            pygame.draw.circle(screen, (205, 127, 50), (medal_cx, medal_cy), int(SCREEN_H * 0.012))
-                            three_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.015), bold=True)
-                            three_txt = three_font.render("3", True, (30, 15, 0))
-                            screen.blit(three_txt, three_txt.get_rect(center=(medal_cx, medal_cy)))
-                        else:
-                            num_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.017), bold=True)
-                            num_txt = num_font.render(str(p_idx + 1), True, (140, 140, 160))
-                            screen.blit(num_txt, num_txt.get_rect(center=(medal_cx, medal_cy)))
-                        # Nombre con avatar
-                        if p_idx < 3:
-                            name_color = (255, 255, 255)
-                        else:
-                            nc = int(200 * fade_factor)
-                            name_color = (nc, nc, min(255, nc + 10))
-                        # Avatar circulito
-                        r_avatar = get_viewer_avatar(p["username"], 30)
-                        name_x_pos = int(SCREEN_W * hx_positions[1]) + slide_offset
-                        if r_avatar is not None:
-                            screen.blit(r_avatar, (name_x_pos, ry + (row_h - 3) // 2 - 15))
-                            name_x_pos += 36
-                        name_txt = font_row_name.render(p["username"], True, name_color)
-                        screen.blit(name_txt, (name_x_pos, ry + (row_h - 3) // 2 - name_txt.get_height() // 2))
-                        # Balance (gris para los que están en negativo)
-                        if p['balance'] < 10000:
-                            bal_color = (140, 140, 150)
-                        elif p_idx < 3:
-                            bal_color = (0, 220, 255)
-                        else:
-                            bal_color = (0, int(180 * fade_factor), int(200 * fade_factor))
-                        bal_txt = font_row_name.render(f"{int(p['balance'])} FXP", True, bal_color)
-                        screen.blit(bal_txt, (int(SCREEN_W * hx_positions[2]) + slide_offset, ry + (row_h - 3) // 2 - bal_txt.get_height() // 2))
-                        # PROFIT (% desde 10,000 FXP iniciales)
-                        profit_pct = ((p['balance'] - 10000) / 10000) * 100
-                        if profit_pct >= 0:
-                            profit_color = (38, 200, 154)
-                            profit_str = f"+{profit_pct:.1f}%"
-                        else:
-                            profit_color = (239, 83, 80)
-                            profit_str = f"{profit_pct:.1f}%"
-                        profit_txt = font_row_stat.render(profit_str, True, profit_color)
-                        screen.blit(profit_txt, (int(SCREEN_W * hx_positions[3]) + slide_offset, ry + (row_h - 3) // 2 - profit_txt.get_height() // 2))
-                        # W
-                        w_txt = font_row_stat.render(str(p["wins"]), True, (38, 166, 154))
-                        screen.blit(w_txt, (int(SCREEN_W * hx_positions[4]) + slide_offset, ry + (row_h - 3) // 2 - w_txt.get_height() // 2))
-                        # L
-                        l_txt = font_row_stat.render(str(p["losses"]), True, (239, 83, 80))
-                        screen.blit(l_txt, (int(SCREEN_W * hx_positions[5]) + slide_offset, ry + (row_h - 3) // 2 - l_txt.get_height() // 2))
-                        # --- WIN RATE con barra gradiente + glow ---
-                        total = p["wins"] + p["losses"]
-                        wr = int((p["wins"] / total * 100)) if total > 0 else 0
-                        wr_x = int(SCREEN_W * hx_positions[6]) + slide_offset
-                        bar_w_wr = int(SCREEN_W * 0.14)
-                        bar_h_wr = int(SCREEN_H * 0.013)
-                        bar_y_wr = ry + (row_h - 3) // 2 - bar_h_wr // 2
-                        pygame.draw.rect(screen, (25, 25, 35), (wr_x, bar_y_wr, bar_w_wr, bar_h_wr), border_radius=7)
-                        fill_w = int(bar_w_wr * (wr / 100))
-                        if fill_w > 0:
-                            bar_surf = pygame.Surface((fill_w, bar_h_wr), pygame.SRCALPHA)
-                            if wr >= 50:
-                                c1 = (20, 120, 100)
-                                c2 = (38, 220, 180)
-                            else:
-                                c1 = (180, 40, 40)
-                                c2 = (255, 100, 100)
-                            for bx in range(fill_w):
-                                t = bx / max(fill_w - 1, 1)
-                                r_c = int(c1[0] + (c2[0] - c1[0]) * t)
-                                g_c = int(c1[1] + (c2[1] - c1[1]) * t)
-                                b_c = int(c1[2] + (c2[2] - c1[2]) * t)
-                                pygame.draw.line(bar_surf, (r_c, g_c, b_c, 220), (bx, 0), (bx, bar_h_wr))
-                            screen.blit(bar_surf, (wr_x, bar_y_wr))
-                            if p_idx < 3:
-                                glow_surf = pygame.Surface((fill_w + 4, bar_h_wr + 4), pygame.SRCALPHA)
-                                glow_surf.fill((c2[0], c2[1], c2[2], 30))
-                                screen.blit(glow_surf, (wr_x - 2, bar_y_wr - 2))
-                        pygame.draw.rect(screen, (50, 50, 60), (wr_x, bar_y_wr, bar_w_wr, bar_h_wr), 1, border_radius=7)
-                        wr_txt = font_row_stat.render(f"{wr}%", True, (220, 220, 230))
-                        screen.blit(wr_txt, (wr_x + bar_w_wr + 10, ry + (row_h - 3) // 2 - wr_txt.get_height() // 2))
-                    # --- SCROLL INDICATOR (barrita fina a la derecha) ---
-                    if len(all_players) > visible_rows:
-                        scroll_track_x = int(SCREEN_W * 0.97)
-                        scroll_track_y = start_y
-                        scroll_track_h = int(SCREEN_H * 0.65)
-                        # Track (fondo)
-                        pygame.draw.line(screen, (30, 40, 50), (scroll_track_x, scroll_track_y), (scroll_track_x, scroll_track_y + scroll_track_h), 3)
-                        # Thumb (posicion actual)
-                        thumb_h = max(20, int(scroll_track_h * (visible_rows / len(all_players))))
-                        thumb_y = scroll_track_y + int((scroll_track_h - thumb_h) * (ranking_scroll / max(1, len(all_players) - visible_rows)))
-                        pygame.draw.line(screen, (0, 180, 220), (scroll_track_x, thumb_y), (scroll_track_x, thumb_y + thumb_h), 4)
-                    # --- FOOTER mejorado (sutil, sin ESC para viewers) ---
-                    from datetime import datetime
-                    now = datetime.now()
-                    if now.month == 12:
-                        next_month = f"1 Enero {now.year + 1}"
-                    else:
-                        months = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-                        next_month = f"1 {months[now.month + 1]} {now.year}"
-                    font_footer = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
-                    reset_txt = font_footer.render(f"Reset mensual: {next_month}", True, (80, 120, 150))
-                    screen.blit(reset_txt, reset_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.95))))
-                    pygame.display.flip()
-                    for r_event in pygame.event.get():
-                        if r_event.type == pygame.QUIT:
-                            in_ranking = False
-                            in_menu = False
-                            app_running = False
-                        elif r_event.type == pygame.KEYDOWN:
-                            if r_event.key == pygame.K_ESCAPE:
-                                in_ranking = False
-                            elif r_event.key == pygame.K_DOWN:
-                                if ranking_scroll < max(0, len(all_players) - visible_rows):
-                                    ranking_scroll += 1
-                            elif r_event.key == pygame.K_UP:
-                                if ranking_scroll > 0:
-                                    ranking_scroll -= 1
             elif menu_click_btn == "config":
                 # === PANTALLA DE CONFIGURACIÓN ===
                 in_config = True
@@ -1460,10 +1064,9 @@ while app_running:
         btn_w = int(SCREEN_W * 0.28)
         btn_h = int(SCREEN_H * 0.08)
         btn_iniciar = pygame.Rect(int(SCREEN_W * (681/1366)) - btn_w // 2, int(SCREEN_H * (341/768)) - btn_h // 2, btn_w, btn_h)
-        btn_ranking = pygame.Rect(int(SCREEN_W * (686/1366)) - btn_w // 2, int(SCREEN_H * (476/768)) - btn_h // 2, btn_w, btn_h)
         btn_config = pygame.Rect(int(SCREEN_W * (952/1920)) - btn_w // 2, int(SCREEN_H * (862/1080)) - btn_h // 2, btn_w, btn_h)
         # Dibujar efecto click (oscurecer en el centro del botón)
-        buttons = [("iniciar", btn_iniciar), ("ranking", btn_ranking), ("config", btn_config)]
+        buttons = [("iniciar", btn_iniciar), ("config", btn_config)]
         for btn_name, btn_rect in buttons:
             if menu_click_btn == btn_name:
                 dark_surface = pygame.Surface((btn_rect.width, btn_rect.height), pygame.SRCALPHA)
@@ -1889,7 +1492,7 @@ while app_running:
                             streak_display = {"name": v["name"], "streak": viewer_streaks[v["name"]], "start_time": current_time}
                     else:
                         viewer_streaks[v["name"]] = 0
-                top_viewers = load_top_viewers()
+                check_top5_levelup_sound(current_time)
                 viewer_trade_active = None
                 viewer_votes = []
                 if active_trade is None:
@@ -2161,193 +1764,6 @@ while app_running:
                     seg_end = min(x + 5, x_bos_end)
                     pygame.draw.line(screen, (255, 255, 255), (x, y_level), (seg_end, y_level), 1)
                 screen.blit(bos_text, text_rect)
-            hud_x = int(SCREEN_W * 0.86)
-            hud_y = int(SCREEN_H * 0.02)
-            # --- PANEL STREAMER (imagen PNG + texto dinámico) ---
-            streamer_path = os.path.join(BASE_DIR, "assets", "panel_streamer.png")
-            if not hasattr(pygame, '_streamer_loaded'):
-                pygame._streamer_loaded = True
-                if os.path.exists(streamer_path):
-                    pygame._streamer_img = pygame.image.load(streamer_path).convert_alpha()
-                else:
-                    pygame._streamer_img = None
-                    print(f"[AVISO] Panel streamer no encontrado")
-            streamer_img = pygame._streamer_img
-            if streamer_img is not None:
-                # Escalar panel (proporción 1774x887, ancho ~25% de pantalla)
-                sp_w = int(SCREEN_W * 0.25)
-                sp_h = int(sp_w * (887 / 1774))
-                sp_scaled = pygame.transform.smoothscale(streamer_img, (sp_w, sp_h))
-                sp_x = SCREEN_W - sp_w - 5
-                sp_y = 5
-                screen.blit(sp_scaled, (sp_x, sp_y))
-                # Avatar dentro del círculo
-                if avatar_img is not None:
-                    av_size = int(sp_h * 0.35)
-                    av_scaled = pygame.transform.smoothscale(avatar_img, (av_size, av_size))
-                    # Centro del círculo calibrado: (1502, 107) en 1920x1080
-                    av_cx = int(SCREEN_W * (1502/1920))
-                    av_cy = int(SCREEN_H * (107/1080))
-                    screen.blit(av_scaled, (av_cx - av_size // 2, av_cy - av_size // 2))
-                # Nombre (barra superior) - bajado un poco para centrar
-                name_x = int(SCREEN_W * (1719/1920))
-                name_y = int(SCREEN_H * (75/1080))
-                n_txt = font_hud_title.render(STREAMER_NAME, True, (0, 220, 255))
-                n_rect = n_txt.get_rect(center=(name_x, name_y))
-                screen.blit(n_txt, n_rect)
-                # 4 cajitas calibradas con cursor en 1920x1080
-                total_trades = wins + losses
-                win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
-                # Calcular racha
-                streak = 0
-                for t in reversed(trade_history):
-                    if t["result"] == "WIN":
-                        streak += 1
-                    else:
-                        break
-                stats_values = [
-                    f"{int(fxp_balance)}",
-                    f"{win_rate:.0f}%",
-                    f"{streak}",
-                    f"{total_trades}",
-                ]
-                stats_colors = [(0, 220, 255), (38, 166, 154), (255, 180, 0), (200, 200, 200)]
-                stats_positions_x = [1604/1920, 1686/1920, 1766/1920, 1849/1920]
-                stats_y_pct = 142/1080
-                font_stat_s = pygame.font.SysFont("Arial", max(8, int(sp_h * 0.08)), bold=True)
-                for i, val in enumerate(stats_values):
-                    sx = int(SCREEN_W * stats_positions_x[i])
-                    sy = int(SCREEN_H * stats_y_pct)
-                    s_txt = font_stat_s.render(val, True, stats_colors[i])
-                    s_rect = s_txt.get_rect(center=(sx, sy))
-                    screen.blit(s_txt, s_rect)
-            # --- CONTADOR DE OPERACIONES (OP #) ---
-            if total_operations > 0:
-                font_op = pygame.font.SysFont("Arial", int(SCREEN_H * 0.014), bold=True)
-                op_txt = font_op.render(f"OP #{total_operations}", True, (100, 120, 140))
-                screen.blit(op_txt, (int(SCREEN_W * 0.78), int(SCREEN_H * 0.08)))
-            # Refrescar TOP 5 periódicamente y detectar cambios
-            if current_time - top5_last_refresh > TOP5_REFRESH_INTERVAL:
-                refresh_top5_with_tracking(current_time)
-                top5_last_refresh = current_time
-            top_panel_path = os.path.join(BASE_DIR, "assets", "panel_top5.png")
-            if not os.path.exists(top_panel_path):
-                top_panel_path = os.path.join(BASE_DIR, "assets", "panel_top5.jpg")
-            if not hasattr(pygame, '_top5_panel_loaded2'):
-                pygame._top5_panel_loaded2 = True
-                if os.path.exists(top_panel_path):
-                    pygame._top5_img2 = pygame.image.load(top_panel_path).convert_alpha()
-                else:
-                    pygame._top5_img2 = None
-                    print(f"[AVISO] Panel TOP 5 no encontrado")
-            top5_img = pygame._top5_img2
-            if top5_img is not None:
-                # Escalar
-                panel_h = int(SCREEN_H * 0.75)
-                panel_w = int(panel_h * (top5_img.get_width() / top5_img.get_height()))
-                top5_scaled = pygame.transform.smoothscale(top5_img, (panel_w, panel_h))
-                panel_x = SCREEN_W - panel_w + 50
-                panel_y = int(SCREEN_H * 0.20)
-                screen.blit(top5_scaled, (panel_x, panel_y))
-                # Posiciones calibradas con 20 clicks en 1920x1080
-                # Convertidas a porcentajes para que funcione en cualquier resolución
-                card_positions = [
-                    {"name": (1690/1920, 343/1080), "w": (1546/1920, 423/1080), "l": (1689/1920, 423/1080), "wr": (1828/1920, 423/1080)},
-                    {"name": (1690/1920, 484/1080), "w": (1546/1920, 555/1080), "l": (1688/1920, 555/1080), "wr": (1828/1920, 555/1080)},
-                    {"name": (1690/1920, 618/1080), "w": (1548/1920, 687/1080), "l": (1689/1920, 687/1080), "wr": (1831/1920, 687/1080)},
-                    {"name": (1690/1920, 751/1080), "w": (1552/1920, 824/1080), "l": (1692/1920, 824/1080), "wr": (1832/1920, 824/1080)},
-                    {"name": (1690/1920, 885/1080), "w": (1556/1920, 952/1080), "l": (1691/1920, 952/1080), "wr": (1829/1920, 952/1080)},
-                ]
-                font_name_top5 = pygame.font.SysFont("Arial", max(14, int(SCREEN_H * 0.022)), bold=True)
-                font_stat_top5 = pygame.font.SysFont("Arial", max(12, int(SCREEN_H * 0.020)), bold=True)
-                for i, viewer in enumerate(top_viewers):
-                    pos = card_positions[i]
-                    # --- EFECTO DE CAMBIO DE POSICIÓN ---
-                    viewer_name = viewer['name']
-                    highlight_info = top5_highlights.get(viewer_name)
-                    if highlight_info:
-                        h_elapsed = current_time - highlight_info["start_time"]
-                        if h_elapsed > TOP5_HIGHLIGHT_DURATION:
-                            del top5_highlights[viewer_name]
-                            highlight_info = None
-                    # Dibujar efecto si hay highlight activo
-                    if highlight_info:
-                        h_elapsed = current_time - highlight_info["start_time"]
-                        h_alpha = max(0, 1.0 - (h_elapsed / TOP5_HIGHLIGHT_DURATION))
-                        # Posición Y del nombre (centro de la tarjeta)
-                        card_cy = int(SCREEN_H * pos["name"][1])
-                        if highlight_info["type"] == "up":
-                            # Flechita ↑ verde al lado del nombre
-                            arrow_x = int(SCREEN_W * pos["name"][0]) + 55
-                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
-                            arrow_color = (0, int(255 * h_alpha), 0)
-                            arrow_txt = arrow_font.render("+", True, arrow_color)
-                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, card_cy)))
-                        elif highlight_info["type"] == "down":
-                            # Flechita ↓ roja al lado del nombre
-                            arrow_x = int(SCREEN_W * pos["name"][0]) + 55
-                            arrow_font = pygame.font.SysFont("Arial", int(SCREEN_H * 0.018), bold=True)
-                            arrow_color = (int(255 * h_alpha), 0, 0)
-                            arrow_txt = arrow_font.render("-", True, arrow_color)
-                            screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, card_cy)))
-                    # Nombre con avatar circulito
-                    nx = int(SCREEN_W * pos["name"][0])
-                    ny = int(SCREEN_H * pos["name"][1])
-                    # Avatar circulito (centrado verticalmente con el nombre)
-                    v_avatar = get_viewer_avatar(viewer['name'], 26)
-                    avatar_x = nx - 75
-                    if v_avatar is not None:
-                        screen.blit(v_avatar, (avatar_x, ny - v_avatar.get_height() // 2 + 2))
-                    # Nombre (arranca a la derecha del avatar, alineado a la izquierda)
-                    # Si es muy largo, reducir el tamaño de fuente
-                    name_text = viewer['name']
-                    max_name_w = int(SCREEN_W * 0.08)  # Ancho máximo para el nombre
-                    name_font_size = int(SCREEN_H * 0.022)
-                    font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
-                    n_txt = font_name_dyn.render(name_text, True, (255, 255, 255))
-                    # Reducir fuente si se sale
-                    while n_txt.get_width() > max_name_w and name_font_size > 10:
-                        name_font_size -= 1
-                        font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
-                        n_txt = font_name_dyn.render(name_text, True, (255, 255, 255))
-                    name_start_x = avatar_x + 37
-                    # Centrar nombre horizontalmente en la tarjeta (entre avatar y borde derecho)
-                    card_center_x = int(SCREEN_W * pos["name"][0])
-                    n_rect = n_txt.get_rect(center=(card_center_x + 5, ny - 2))
-                    screen.blit(n_txt, n_rect)
-                    # W
-                    w_val = viewer.get('wins', 0)
-                    if w_val > 0:
-                        w_txt = font_stat_top5.render(str(w_val), True, (38, 166, 154))
-                    else:
-                        w_txt = font_stat_top5.render("-", True, (100, 100, 120))
-                    w_rect = w_txt.get_rect(center=(int(SCREEN_W * pos["w"][0]), int(SCREEN_H * pos["w"][1])))
-                    screen.blit(w_txt, w_rect)
-                    # L
-                    l_val = viewer.get('losses', 0)
-                    if l_val > 0:
-                        l_txt = font_stat_top5.render(str(l_val), True, (239, 83, 80))
-                    else:
-                        l_txt = font_stat_top5.render("-", True, (100, 100, 120))
-                    l_rect = l_txt.get_rect(center=(int(SCREEN_W * pos["l"][0]), int(SCREEN_H * pos["l"][1])))
-                    screen.blit(l_txt, l_rect)
-                    # WIN%
-                    total = w_val + l_val
-                    if total > 0:
-                        wr_val = int((w_val / total * 100))
-                        wr_txt = font_stat_top5.render(f"{wr_val}%", True, (0, 220, 255))
-                    else:
-                        wr_txt = font_stat_top5.render("-", True, (100, 100, 120))
-                    wr_rect = wr_txt.get_rect(center=(int(SCREEN_W * pos["wr"][0]), int(SCREEN_H * pos["wr"][1])))
-                    screen.blit(wr_txt, wr_rect)
-                    # Balance FXP (al lado derecho del nombre)
-                    bal_val = viewer.get('balance', 10000)
-                    font_bal_top5 = pygame.font.SysFont("Arial", max(11, int(SCREEN_H * 0.016)), bold=True)
-                    bal_color = (0, 200, 220) if bal_val >= 10000 else (200, 100, 100)
-                    bal_txt = font_bal_top5.render(f"{int(bal_val)} FXP", True, bal_color)
-                    bal_x = int(SCREEN_W * pos["name"][0]) + 90
-                    bal_y = int(SCREEN_H * pos["name"][1])
-                    screen.blit(bal_txt, (bal_x, bal_y - bal_txt.get_height() // 2))
             # --- PANEL VIEWERS (arriba centro, donde estaban los botones) ---
             btn_x = int(SCREEN_W * 0.35)
             btn_y = int(SCREEN_H * 0.03)
