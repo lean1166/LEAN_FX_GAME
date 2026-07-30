@@ -1934,6 +1934,10 @@ while app_running:
                     active_fvg["index"] -= 1
                     if active_fvg["index"] < 0:
                         active_fvg = None
+                if active_trade is not None and "entry_index" in active_trade:
+                    active_trade["entry_index"] -= 1
+                if viewer_trade_active is not None and "entry_index" in viewer_trade_active:
+                    viewer_trade_active["entry_index"] -= 1
             current_len = len(candles)
             bos_markers[:] = [b for b in bos_markers if current_len - b["break_index"] <= 999]
             confirmed_fractals[:] = [f for f in confirmed_fractals if current_len - f["index"] <= 999]
