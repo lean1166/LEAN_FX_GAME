@@ -306,6 +306,7 @@ zone_timer_start = 0  # Momento en que se activó el timer
 zone_detected = None  # Info de la zona detectada {"high", "low", "type"}
 trade_decided = False  # Si ya eligió BUY o SELL durante el timer
 zones_mitigated = set()  # Zonas ya mitigadas (no se repiten)
+zones_mitigated_info = {}  # {"zone_id": {"index": candle_index, "bos_count": 0}} info de mitigación
 # Flash al ganar/perder
 flash_active = False
 flash_start_time = 0
@@ -439,6 +440,9 @@ def process_new_candle(candles_list, new_index):
     if prev_range_low is not None and is_bear and c["close"] < prev_range_low:
         bos_markers.append({"type": "BAJISTA", "price": prev_range_low, "level_index": prev_range_low_index, "break_index": new_index})
         play_sound(sound_bos)
+        # Incrementar bos_count de zonas mitigadas
+        for k in zones_mitigated_info:
+            zones_mitigated_info[k]["bos_count"] = zones_mitigated_info[k].get("bos_count", 0) + 1
         if range_high is not None:
             confirmed_fractals.append({"price": range_high, "index": range_high_index, "type": "high"})
             play_sound(sound_fractal)
@@ -473,6 +477,8 @@ def process_new_candle(candles_list, new_index):
     if prev_range_high is not None and is_bull and c["close"] > prev_range_high:
         bos_markers.append({"type": "ALCISTA", "price": prev_range_high, "level_index": prev_range_high_index, "break_index": new_index})
         play_sound(sound_bos)
+        for k in zones_mitigated_info:
+            zones_mitigated_info[k]["bos_count"] = zones_mitigated_info[k].get("bos_count", 0) + 1
         if range_low is not None:
             confirmed_fractals.append({"price": range_low, "index": range_low_index, "type": "low"})
             play_sound(sound_fractal)
@@ -1732,6 +1738,8 @@ while app_running:
                             zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"], "source": "EXTREMO"}
                             zones_mitigated.add(zone_id)
                             zones_mitigated.add(zone_price_id)
+                            zones_mitigated_info[zone_id] = {"index": len(candles), "bos_count": 0}
+                            zones_mitigated_info[zone_price_id] = {"index": len(candles), "bos_count": 0}
                             # Si el Decisional se superpone, mitigarlo también (no activar 2 entradas)
                             if active_decisional is not None:
                                 dec_id = f"dec_{active_decisional['index']}"
@@ -1739,6 +1747,8 @@ while app_running:
                                 if active_decisional["low"] <= price_now <= active_decisional["high"]:
                                     zones_mitigated.add(dec_id)
                                     zones_mitigated.add(dec_price_id)
+                                    zones_mitigated_info[dec_id] = {"index": len(candles), "bos_count": 0}
+                                    zones_mitigated_info[dec_price_id] = {"index": len(candles), "bos_count": 0}
                             # Reproducir voz aleatoria de zona
                             if zona_voices:
                                 vi = random.randint(0, len(zona_voices) - 1)
@@ -1756,6 +1766,8 @@ while app_running:
                             zone_detected = {"high": active_decisional["high"], "low": active_decisional["low"], "type": active_decisional["type"], "source": "DECISIONAL"}
                             zones_mitigated.add(zone_id)
                             zones_mitigated.add(zone_price_id)
+                            zones_mitigated_info[zone_id] = {"index": len(candles), "bos_count": 0}
+                            zones_mitigated_info[zone_price_id] = {"index": len(candles), "bos_count": 0}
                             # Reproducir voz aleatoria de zona
                             if zona_voices:
                                 vi = random.randint(0, len(zona_voices) - 1)
@@ -1975,8 +1987,12 @@ while app_running:
                 # No dibujar si ya fue mitigada
                 ob_zone_id = f"ob_{ob_data['index']}"
                 ob_price_id = f"ob_{int(ob_data['high']*10)}_{int(ob_data['low']*10)}"
-                if ob_zone_id in zones_mitigated or ob_price_id in zones_mitigated:
-                    continue
+                # Si fue mitigada, dibujar solo hasta el punto de mitigación
+                mitigated = ob_zone_id in zones_mitigated or ob_price_id in zones_mitigated
+                if mitigated:
+                    info = zones_mitigated_info.get(ob_zone_id) or zones_mitigated_info.get(ob_price_id)
+                    if info and info.get("bos_count", 0) >= 2:
+                        continue  # Ya pasaron 2 BOS, borrar
                 ob_vis = ob_data["index"] - visible_start_global
                 if ob_vis >= len(visible_candles):
                     continue
@@ -1991,6 +2007,13 @@ while app_running:
                     ob_x_end = int(start_x + (ob_end_vis * spacing)) + candle_width
                 else:
                     ob_x_end = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
+                # Si fue mitigada, limitar hasta el punto de mitigación
+                if mitigated:
+                    info = zones_mitigated_info.get(ob_zone_id) or zones_mitigated_info.get(ob_price_id)
+                    if info:
+                        mit_vis = info["index"] - visible_start_global
+                        if 0 <= mit_vis < len(visible_candles):
+                            ob_x_end = int(start_x + (mit_vis * spacing)) + candle_width
                 ob_y_high = center_y - int((ob_data["high"] - view_center_price) * vertical_zoom)
                 ob_y_low = center_y - int((ob_data["low"] - view_center_price) * vertical_zoom)
                 ob_height = max(1, ob_y_low - ob_y_high)
@@ -2025,6 +2048,27 @@ while app_running:
                         dec_txt = font_ob.render("DECISIONAL", True, (255, 255, 255))
                         dec_rect = dec_txt.get_rect(center=(dec_x_start + dec_width // 2, dec_y_high + dec_height // 2))
                         ob_surface.blit(dec_txt, dec_rect)
+                else:
+                    # Mitigada: dibujar hasta punto de mitigación, borrar después de 2 BOS
+                    info = zones_mitigated_info.get(dec_zone_id) or zones_mitigated_info.get(dec_price_id)
+                    if info and info.get("bos_count", 0) < 2:
+                        dec_vis = active_decisional["index"] - visible_start_global
+                        if 0 <= dec_vis < len(visible_candles):
+                            dec_x_start = int(start_x + (dec_vis * spacing))
+                            mit_vis = info["index"] - visible_start_global
+                            if 0 <= mit_vis < len(visible_candles):
+                                dec_x_end = int(start_x + (mit_vis * spacing)) + candle_width
+                            else:
+                                dec_x_end = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
+                            dec_y_high = center_y - int((active_decisional["high"] - view_center_price) * vertical_zoom)
+                            dec_y_low = center_y - int((active_decisional["low"] - view_center_price) * vertical_zoom)
+                            dec_height = max(1, dec_y_low - dec_y_high)
+                            dec_width = max(1, dec_x_end - dec_x_start)
+                            if active_decisional["type"] == "ALCISTA":
+                                dec_color = (38, 166, 154, 15)
+                            else:
+                                dec_color = (239, 83, 80, 15)
+                            pygame.draw.rect(ob_surface, dec_color, (dec_x_start, dec_y_high, dec_width, dec_height))
             if active_fvg is not None:
                 fvg_vis = active_fvg["index"] - visible_start_global
                 if 0 <= fvg_vis < len(visible_candles):
