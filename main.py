@@ -1665,7 +1665,7 @@ while app_running:
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                 # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
-                if active_trade is None and not zone_frozen:
+                if active_trade is None and not zone_frozen and viewer_trade_active is None:
                     price_now = current_candle["close"]
                     # Verificar Order Block activo
                     if active_ob is not None:
@@ -1675,6 +1675,11 @@ while app_running:
                             zone_timer_start = current_time
                             zone_detected = {"high": active_ob["high"], "low": active_ob["low"], "type": active_ob["type"], "source": "EXTREMO"}
                             zones_mitigated.add(zone_id)
+                            # Si el Decisional se superpone, mitigarlo también (no activar 2 entradas)
+                            if active_decisional is not None:
+                                dec_id = f"dec_{active_decisional['index']}"
+                                if active_decisional["low"] <= price_now <= active_decisional["high"]:
+                                    zones_mitigated.add(dec_id)
                             # Reproducir voz aleatoria de zona
                             if zona_voices:
                                 vi = random.randint(0, len(zona_voices) - 1)
