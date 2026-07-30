@@ -233,7 +233,7 @@ price = 1000
 trend_dir = random.choice([-1, 1])
 # Generador de mercado realista: impulsos + retrocesos variados
 is_impulse = True  # Empieza con impulso
-trend_length = random.randint(8, 15)
+trend_length = random.randint(6, 10)
 trend_count = 0
 trend_strength = random.uniform(4, 10)  # Fuerza del movimiento
 for _ in range(180):
@@ -243,18 +243,16 @@ for _ in range(180):
         trend_count = 0
         is_impulse = not is_impulse
         if is_impulse:
-            # Impulso: 8-15 velas, puede ser fuerte o moderado
-            trend_length = random.randint(8, 15)
+            # Impulso: 6-10 velas
+            trend_length = random.randint(6, 10)
             trend_strength = random.uniform(4, 12)
         else:
-            # Retroceso: variado, a veces suave (más velas, menos fuerza) a veces fuerte (pocas velas, mucha fuerza)
+            # Retroceso: variado
             if random.random() < 0.4:
-                # Retroceso fuerte y rápido
-                trend_length = random.randint(4, 8)
+                trend_length = random.randint(3, 6)
                 trend_strength = random.uniform(6, 11)
             else:
-                # Retroceso suave y largo
-                trend_length = random.randint(8, 14)
+                trend_length = random.randint(5, 9)
                 trend_strength = random.uniform(2, 6)
     # Generar vela
     if random.random() < 0.80:
@@ -1586,6 +1584,19 @@ while app_running:
         # --- Descongelar voice freeze ---
         if voice_freeze_active and current_time - voice_freeze_start > VOICE_FREEZE_DURATION:
             voice_freeze_active = False
+        # --- VOZ ENTRE TRADES (mantener atención) ---
+        if game_started and not zone_frozen and not voice_freeze_active and active_trade is None and viewer_trade_active is None:
+            if not hasattr(pygame, '_idle_voice_last'):
+                pygame._idle_voice_last = current_time
+            if current_time - pygame._idle_voice_last > 35000:  # Cada 35 segundos
+                pygame._idle_voice_last = current_time
+                idle_voices = []
+                for i in range(1, 8):
+                    sv = load_sound(f"IDLE_VOZ_{i}.mp3")
+                    if sv is not None:
+                        idle_voices.append(sv)
+                if idle_voices:
+                    random.choice(idle_voices).play()
         # --- MOVER PRECIO (solo si NO está congelado y NO hay voice freeze) ---
         if not zone_frozen and not voice_freeze_active:
             if current_time - last_tick_time >= TICK_DELAY:

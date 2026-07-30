@@ -57,6 +57,17 @@ FRASES_LOSS = [
     ("VOZ_LOSS_3.mp3", "Stop loss tocado, no siempre se gana, pero la estrategia sigue siendo buena, vamos por la siguiente entrada"),
 ]
 
+# Frases entre trades (para mantener la atención)
+FRASES_IDLE = [
+    ("IDLE_VOZ_1.mp3", "El precio sigue moviéndose, estén atentos que en cualquier momento se activa una zona"),
+    ("IDLE_VOZ_2.mp3", "Buscamos la siguiente zona operativa, el mercado está formando estructura"),
+    ("IDLE_VOZ_3.mp3", "Paciencia traders, el precio necesita desarrollar antes de darnos otra oportunidad"),
+    ("IDLE_VOZ_4.mp3", "Estamos cerca de una zona, prepárense para la siguiente decisión"),
+    ("IDLE_VOZ_5.mp3", "Buen trading de los que acertaron la última, sigan así y el ranking se mueve"),
+    ("IDLE_VOZ_6.mp3", "El gráfico está formando una nueva estructura, esto se pone interesante"),
+    ("IDLE_VOZ_7.mp3", "Recuerden escribir BUY o SELL cuando aparezca la zona, así participan del ranking"),
+]
+
 async def generar_audio(texto, filename):
     filepath = os.path.join(OUTPUT_DIR, filename)
     print(f"Generando: {filename}...")
@@ -66,7 +77,7 @@ async def generar_audio(texto, filename):
 
 async def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    all_frases = FRASES_ZONA + FRASES_LEAN_BUY + FRASES_LEAN_SELL + FRASES_WIN + FRASES_LOSS
+    all_frases = FRASES_ZONA + FRASES_LEAN_BUY + FRASES_LEAN_SELL + FRASES_WIN + FRASES_LOSS + FRASES_IDLE
     print(f"Generando {len(all_frases)} audios con voz: {VOICE} (velocidad: {RATE})")
     print(f"Carpeta: {OUTPUT_DIR}\n")
     for filename, texto in all_frases:
