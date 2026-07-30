@@ -887,7 +887,8 @@ while app_running:
                     random.shuffle(music_playlist)
                     music_current_index = 0
                     pygame.mixer.music.load(music_playlist[music_current_index])
-                    pygame.mixer.music.set_volume(0.3)
+                    vol = int(get_config("vol_music", "30")) / 100.0
+                    pygame.mixer.music.set_volume(vol)
                     pygame.mixer.music.play()
                     music_playing = True
                 elif sound_game_music is not None:
@@ -1394,6 +1395,8 @@ while app_running:
                                         sound_game_music.set_volume(cfg_vol_music / 100.0)
                                     if music_playing:
                                         pygame.mixer.music.set_volume(cfg_vol_music / 100.0)
+                                    if sound_ambient is not None:
+                                        sound_ambient.set_volume(cfg_vol_music / 100.0)
                                     if sound_ambient is not None:
                                         sound_ambient.set_volume(cfg_vol_music / 100.0)
                                     # Aplicar volumen de efectos a todos los sonidos
