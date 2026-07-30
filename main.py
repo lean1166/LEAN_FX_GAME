@@ -8,7 +8,7 @@ import pygame
 if getattr(sys, 'frozen', False):
     BASE_DIR = sys._MEIPASS
 else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    BASE_DIR = BASE_DIR
 from database import (init_db, get_top_players, get_streamer_stats, 
                       update_player_balance, add_trade_history, 
                       check_monthly_reset, get_config, create_player,
@@ -29,9 +29,9 @@ except Exception as e:
     sys.exit(1)
 
 # Icono del juego (fuera del try principal para que no crashee)
-icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.png")
+icon_path = os.path.join(BASE_DIR, "assets", "icon.png")
 if not os.path.exists(icon_path):
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
+    icon_path = os.path.join(BASE_DIR, "assets", "icon.ico")
 if os.path.exists(icon_path):
     try:
         pygame.display.set_icon(pygame.image.load(icon_path))
@@ -39,7 +39,7 @@ if os.path.exists(icon_path):
         print("[AVISO] No se pudo cargar el icono")
 
 # --- CARGAR SONIDOS ---
-SOUND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "sound")
+SOUND_DIR = os.path.join(BASE_DIR, "assets", "sound")
 
 def load_sound(filename):
     path = os.path.join(SOUND_DIR, filename)
@@ -147,7 +147,7 @@ font_bos = pygame.font.SysFont("Arial", 16, bold=True)
 font_ob = pygame.font.SysFont("Consolas", 13, bold=True)
 
 # --- CARGAR AVATAR ---
-PROFILE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "profile")
+PROFILE_DIR = os.path.join(BASE_DIR, "assets", "profile")
 avatar_img = None
 # Buscar cualquier imagen en la carpeta profile
 if os.path.exists(PROFILE_DIR):
@@ -160,7 +160,7 @@ if avatar_img is None:
     print(f"[AVISO] Avatar no encontrado en: {PROFILE_DIR}")
 
 # --- SISTEMA DE AVATARES DE VIEWERS (circulitos) ---
-AVATARS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "avatars")
+AVATARS_DIR = os.path.join(BASE_DIR, "assets", "avatars")
 os.makedirs(AVATARS_DIR, exist_ok=True)
 viewer_avatar_cache = {}  # Cache: {"username": pygame.Surface}
 
@@ -705,9 +705,9 @@ in_menu = True
 menu_selection = None
 
 # Cargar imagen de fondo del menú
-menu_bg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "menu_bg.png")
+menu_bg_path = os.path.join(BASE_DIR, "assets", "menu_bg.png")
 if not os.path.exists(menu_bg_path):
-    menu_bg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "menu_bg.jpg")
+    menu_bg_path = os.path.join(BASE_DIR, "assets", "menu_bg.jpg")
 menu_bg = None
 if os.path.exists(menu_bg_path):
     menu_bg = pygame.image.load(menu_bg_path).convert()
@@ -2154,7 +2154,7 @@ while app_running:
             hud_x = int(SCREEN_W * 0.86)
             hud_y = int(SCREEN_H * 0.02)
             # --- PANEL STREAMER (imagen PNG + texto dinámico) ---
-            streamer_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_streamer.png")
+            streamer_path = os.path.join(BASE_DIR, "assets", "panel_streamer.png")
             if not hasattr(pygame, '_streamer_loaded'):
                 pygame._streamer_loaded = True
                 if os.path.exists(streamer_path):
@@ -2220,9 +2220,9 @@ while app_running:
             if current_time - top5_last_refresh > TOP5_REFRESH_INTERVAL:
                 refresh_top5_with_tracking(current_time)
                 top5_last_refresh = current_time
-            top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.png")
+            top_panel_path = os.path.join(BASE_DIR, "assets", "panel_top5.png")
             if not os.path.exists(top_panel_path):
-                top_panel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "panel_top5.jpg")
+                top_panel_path = os.path.join(BASE_DIR, "assets", "panel_top5.jpg")
             if not hasattr(pygame, '_top5_panel_loaded2'):
                 pygame._top5_panel_loaded2 = True
                 if os.path.exists(top_panel_path):
@@ -2581,7 +2581,7 @@ while app_running:
             # Cargar imagen fuego (cache)
             if not hasattr(pygame, '_fire_img_loaded'):
                 pygame._fire_img_loaded = True
-                fire_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "fire.png")
+                fire_path = os.path.join(BASE_DIR, "assets", "fire.png")
                 if os.path.exists(fire_path):
                     pygame._fire_img = pygame.image.load(fire_path).convert_alpha()
                     fire_size = int(SCREEN_H * 0.035)
