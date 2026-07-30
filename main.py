@@ -2181,7 +2181,10 @@ while app_running:
                         font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
                         n_txt = font_name_dyn.render(name_text, True, (255, 255, 255))
                     name_start_x = avatar_x + 37
-                    screen.blit(n_txt, (name_start_x, ny - n_txt.get_height() // 2))
+                    # Centrar nombre horizontalmente en la tarjeta (entre avatar y borde derecho)
+                    card_center_x = int(SCREEN_W * pos["name"][0])
+                    n_rect = n_txt.get_rect(center=(card_center_x + 5, ny - 2))
+                    screen.blit(n_txt, n_rect)
                     # W
                     w_val = viewer.get('wins', 0)
                     if w_val > 0:
