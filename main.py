@@ -19,9 +19,14 @@ try:
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.NOFRAME)
     pygame.display.set_caption("LEAN FX GAME")
     # Icono del juego
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.png")
+    if not os.path.exists(icon_path):
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
     if os.path.exists(icon_path):
-        pygame.display.set_icon(pygame.image.load(icon_path))
+        try:
+            pygame.display.set_icon(pygame.image.load(icon_path))
+        except:
+            pass
 except Exception as e:
     print("[ERROR GRAFICO]:", e)
     sys.exit(1)
