@@ -53,6 +53,18 @@ sound_ambient = load_sound("AMBIENT.mp3")
 sound_game_music = load_sound("GAME_MUSIC.mp3")
 sound_levelup = load_sound("LEVELUP.mp3")  # Sonido cuando alguien sube en TOP 5
 
+# --- PLAYLIST DE MÚSICA (detecta automáticamente 1.mp3, 2.mp3, etc.) ---
+music_playlist = []
+for i in range(1, 100):
+    mp = os.path.join(SOUND_DIR, f"{i}.mp3")
+    if os.path.exists(mp):
+        music_playlist.append(mp)
+if not music_playlist and sound_game_music is not None:
+    music_playlist = []  # Usa GAME_MUSIC como fallback
+random.shuffle(music_playlist)
+music_current_index = 0
+music_playing = False
+
 # --- CARGAR VOCES DE ZONA (Jorge de México) ---
 zona_voices = []
 for i in range(1, 13):
@@ -870,7 +882,13 @@ while app_running:
                 game_started = True
                 if sound_ambient is not None:
                     sound_ambient.stop()
-                if sound_game_music is not None:
+                # Iniciar playlist de música
+                if music_playlist:
+                    pygame.mixer.music.load(music_playlist[music_current_index])
+                    pygame.mixer.music.set_volume(0.3)
+                    pygame.mixer.music.play()
+                    music_playing = True
+                elif sound_game_music is not None:
                     sound_game_music.set_volume(0.3)
                     sound_game_music.play(loops=-1)
             elif menu_click_btn == "ranking":
@@ -1372,6 +1390,8 @@ while app_running:
                                     VIEWER_BOTS_ENABLED = cfg_viewers_enabled
                                     if sound_game_music is not None:
                                         sound_game_music.set_volume(cfg_vol_music / 100.0)
+                                    if music_playing:
+                                        pygame.mixer.music.set_volume(cfg_vol_music / 100.0)
                                     if sound_ambient is not None:
                                         sound_ambient.set_volume(cfg_vol_music / 100.0)
                                     # Aplicar volumen de efectos a todos los sonidos
@@ -1594,6 +1614,14 @@ while app_running:
         # --- Descongelar voice freeze ---
         if voice_freeze_active and current_time - voice_freeze_start > VOICE_FREEZE_DURATION:
             voice_freeze_active = False
+        # --- PLAYLIST: pasar a siguiente canción cuando termina ---
+        if music_playing and not pygame.mixer.music.get_busy():
+            music_current_index = (music_current_index + 1) % len(music_playlist)
+            try:
+                pygame.mixer.music.load(music_playlist[music_current_index])
+                pygame.mixer.music.play()
+            except:
+                pass
         # --- VOZ ENTRE TRADES (mantener atención) ---
         if game_started and not zone_frozen and not voice_freeze_active and active_trade is None and viewer_trade_active is None:
             if not hasattr(pygame, '_idle_voice_last'):
@@ -1939,6 +1967,11 @@ while app_running:
             for ob_data, ob_opacity, ob_label in [(prev_ob, 20, ""), (active_ob, 40, "EXTREMO")]:
                 if ob_data is None:
                     continue
+                # No dibujar si ya fue mitigada
+                ob_zone_id = f"ob_{ob_data['index']}"
+                ob_price_id = f"ob_{int(ob_data['high']*10)}_{int(ob_data['low']*10)}"
+                if ob_zone_id in zones_mitigated or ob_price_id in zones_mitigated:
+                    continue
                 ob_vis = ob_data["index"] - visible_start_global
                 if ob_vis >= len(visible_candles):
                     continue
@@ -1967,22 +2000,26 @@ while app_running:
                     label_rect = label_txt.get_rect(center=(ob_x_start + ob_width // 2, ob_y_high + ob_height // 2))
                     ob_surface.blit(label_txt, label_rect)
             if active_decisional is not None:
-                dec_vis = active_decisional["index"] - visible_start_global
-                if 0 <= dec_vis < len(visible_candles):
-                    dec_x_start = int(start_x + (dec_vis * spacing))
-                    dec_x_end = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
-                    dec_y_high = center_y - int((active_decisional["high"] - view_center_price) * vertical_zoom)
-                    dec_y_low = center_y - int((active_decisional["low"] - view_center_price) * vertical_zoom)
-                    dec_height = max(1, dec_y_low - dec_y_high)
-                    dec_width = max(1, dec_x_end - dec_x_start)
-                    if active_decisional["type"] == "ALCISTA":
-                        dec_color = (38, 166, 154, 30)
-                    else:
-                        dec_color = (239, 83, 80, 30)
-                    pygame.draw.rect(ob_surface, dec_color, (dec_x_start, dec_y_high, dec_width, dec_height))
-                    dec_txt = font_ob.render("DECISIONAL", True, (255, 255, 255))
-                    dec_rect = dec_txt.get_rect(center=(dec_x_start + dec_width // 2, dec_y_high + dec_height // 2))
-                    ob_surface.blit(dec_txt, dec_rect)
+                # No dibujar si ya fue mitigada
+                dec_zone_id = f"dec_{active_decisional['index']}"
+                dec_price_id = f"dec_{int(active_decisional['high']*10)}_{int(active_decisional['low']*10)}"
+                if dec_zone_id not in zones_mitigated and dec_price_id not in zones_mitigated:
+                    dec_vis = active_decisional["index"] - visible_start_global
+                    if 0 <= dec_vis < len(visible_candles):
+                        dec_x_start = int(start_x + (dec_vis * spacing))
+                        dec_x_end = int(start_x + ((len(visible_candles) - 1) * spacing)) + candle_width
+                        dec_y_high = center_y - int((active_decisional["high"] - view_center_price) * vertical_zoom)
+                        dec_y_low = center_y - int((active_decisional["low"] - view_center_price) * vertical_zoom)
+                        dec_height = max(1, dec_y_low - dec_y_high)
+                        dec_width = max(1, dec_x_end - dec_x_start)
+                        if active_decisional["type"] == "ALCISTA":
+                            dec_color = (38, 166, 154, 30)
+                        else:
+                            dec_color = (239, 83, 80, 30)
+                        pygame.draw.rect(ob_surface, dec_color, (dec_x_start, dec_y_high, dec_width, dec_height))
+                        dec_txt = font_ob.render("DECISIONAL", True, (255, 255, 255))
+                        dec_rect = dec_txt.get_rect(center=(dec_x_start + dec_width // 2, dec_y_high + dec_height // 2))
+                        ob_surface.blit(dec_txt, dec_rect)
             if active_fvg is not None:
                 fvg_vis = active_fvg["index"] - visible_start_global
                 if 0 <= fvg_vis < len(visible_candles):
@@ -2549,5 +2586,8 @@ while app_running:
     # Parar música al salir del game loop (volver al menú)
     if sound_game_music is not None:
         sound_game_music.stop()
+    if music_playing:
+        pygame.mixer.music.stop()
+        music_playing = False
 
 pygame.quit()
