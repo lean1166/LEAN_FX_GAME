@@ -52,11 +52,12 @@ FALLBACK_ASPECT = 0.62  # ancho/alto por si no existe panel_top5.png todavía
 
 pygame.init()
 
-# --- Cargar panel e imagen para calcular ancho real (define el tamaño de ventana) ---
+# --- Cargar panel (sin convert_alpha todavía: eso requiere que la ventana ya
+#     exista) solo para medir su tamaño real y así dimensionar la ventana ---
 panel_path = find_asset("panel_top5.png", "panel_top5.jpg")
 panel_img_raw = None
 if panel_path:
-    panel_img_raw = pygame.image.load(panel_path).convert_alpha()
+    panel_img_raw = pygame.image.load(panel_path)
     PANEL_W = int(PANEL_H * (panel_img_raw.get_width() / panel_img_raw.get_height()))
 else:
     PANEL_W = int(PANEL_H * FALLBACK_ASPECT)
@@ -96,7 +97,8 @@ pygame.font.init()
 
 panel_img = None
 if panel_img_raw is not None:
-    panel_img = pygame.transform.smoothscale(panel_img_raw, (WINDOW_W, WINDOW_H))
+    # Ahora sí, con la ventana ya creada, se puede convertir el formato de color
+    panel_img = pygame.transform.smoothscale(panel_img_raw.convert_alpha(), (WINDOW_W, WINDOW_H))
 
 
 def load_top_viewers():
