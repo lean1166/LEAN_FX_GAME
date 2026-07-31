@@ -9,7 +9,7 @@ from avatar_utils import get_viewer_avatar
 from database import (get_top_players, get_streamer_stats,
                       update_player_balance, add_trade_history,
                       check_monthly_reset, get_config, create_player,
-                      get_all_players_ranked)
+                      get_all_players_ranked, add_bonus_to_all_players)
 from tiktok_chat import TikTokChatReader
 
 # NOTA (arquitectura multi-ventana V2): main.py ya NO dibuja el panel del
@@ -295,6 +295,29 @@ bot_bias_direction = 0  # 1 = arriba, -1 = abajo
 VIEWER_BOTS_ENABLED = False  # Desactivado: solo viewers reales de TikTok
 VIEWER_BOT_INTERVAL = 8000  # (ya no se usa, operan en zona)
 viewer_bot_last_time = 0
+
+# --- SISTEMA DE LIQUIDEZ POR LIKES ---
+# Cada 10 minutos se activa un evento donde el mercado "se queda sin
+# liquidez" y hace falta que el chat de TikTok dé likes para reponerla.
+# Rotan 3 tipos de evento en orden fijo: A (bloqueante) -> C (rondas por
+# nivel) -> D (barra unica) -> A -> C -> D ...
+LIQUIDITY_EVENT_INTERVAL = 600000  # 10 minutos en ms
+LIQUIDITY_EVENT_TYPES = ["A", "C", "D"]
+liquidity_event_index = 0  # Indice dentro de LIQUIDITY_EVENT_TYPES
+liquidity_last_trigger = 0  # Momento (ms) del ultimo evento disparado (se fija al iniciar la partida)
+liquidity_event_active = None  # None o dict con info del evento en curso
+# Simulador de likes para pruebas sin estar en vivo (tecla L)
+simulated_likes = 0
+SIMULATED_LIKES_PER_PRESS = 10
+
+# Config de cada tipo de evento
+LIQUIDITY_A_TARGET = 100        # Likes necesarios para reanudar (evento bloqueante)
+LIQUIDITY_A_TIMEOUT = 45000     # 45s: si no se llega a la meta, se reanuda igual (seguridad)
+LIQUIDITY_C_DURATION = 15000    # 15s de duracion
+LIQUIDITY_C_LEVELS = [(100, 500), (200, 1000), (400, 2000)]  # (likes, bono FXP)
+LIQUIDITY_D_DURATION = 20000    # 20s de duracion
+LIQUIDITY_D_TARGET = 150        # Meta unica para llenar la barra
+LIQUIDITY_D_BONUS = 800         # Bono si se llena la barra
 
 # --- CONEXIÓN TIKTOK LIVE ---
 tiktok_chat = TikTokChatReader(username="lean.fx1")
@@ -858,6 +881,8 @@ while app_running:
             if menu_click_btn == "iniciar":
                 in_menu = False
                 game_started = True
+                liquidity_last_trigger = pygame.time.get_ticks()
+                liquidity_event_active = None
                 if sound_ambient is not None:
                     sound_ambient.stop()
                 # Iniciar playlist de música
@@ -1494,6 +1519,10 @@ while app_running:
                     TIMER_DURATION = min(30000, TIMER_DURATION + 1000)
                 elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
                     TIMER_DURATION = max(3000, TIMER_DURATION - 1000)
+                elif event.key == pygame.K_l:
+                    # Simular likes con la tecla L (solo para pruebas sin estar en vivo)
+                    simulated_likes += SIMULATED_LIKES_PER_PRESS
+                    print(f"[LIKES SIMULADOS] +{SIMULATED_LIKES_PER_PRESS} (total sim: {simulated_likes})")
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 print(f"[CLICK] x={mx}, y={my}")
@@ -1597,6 +1626,55 @@ while app_running:
         # --- Descongelar voice freeze ---
         if voice_freeze_active and current_time - voice_freeze_start > VOICE_FREEZE_DURATION:
             voice_freeze_active = False
+
+        # --- SISTEMA DE LIQUIDEZ POR LIKES ---
+        # Disparar un nuevo evento cada LIQUIDITY_EVENT_INTERVAL, pero solo si
+        # no hay un trade/zona en curso (no interrumpe una operación activa)
+        if (game_started and liquidity_event_active is None and not zone_frozen
+                and active_trade is None and viewer_trade_active is None and not voice_freeze_active
+                and current_time - liquidity_last_trigger >= LIQUIDITY_EVENT_INTERVAL):
+            liquidity_last_trigger = current_time
+            event_type = LIQUIDITY_EVENT_TYPES[liquidity_event_index % len(LIQUIDITY_EVENT_TYPES)]
+            liquidity_event_index += 1
+            simulated_likes = 0
+            if tiktok_chat is not None:
+                tiktok_chat.reset_like_count()
+            if event_type == "A":
+                liquidity_event_active = {"type": "A", "start_time": current_time}
+            elif event_type == "C":
+                liquidity_event_active = {"type": "C", "start_time": current_time, "reached_level": -1}
+            elif event_type == "D":
+                liquidity_event_active = {"type": "D", "start_time": current_time}
+
+        if liquidity_event_active is not None:
+            _ev = liquidity_event_active
+            _elapsed = current_time - _ev["start_time"]
+            _real_likes = tiktok_chat.get_like_count() if tiktok_chat is not None else 0
+            _current_likes = _real_likes + simulated_likes
+
+            if _ev["type"] == "A":
+                # Evento bloqueante: nada de trading hasta juntar la meta o hasta el timeout de seguridad
+                if _current_likes >= LIQUIDITY_A_TARGET or _elapsed >= LIQUIDITY_A_TIMEOUT:
+                    liquidity_event_active = None
+            elif _ev["type"] == "C":
+                # Rondas por nivel: se paga el nivel mas alto alcanzado, se reanuda siempre al terminar el tiempo
+                for lvl_idx, (lvl_likes, lvl_bonus) in enumerate(LIQUIDITY_C_LEVELS):
+                    if _current_likes >= lvl_likes and lvl_idx > _ev["reached_level"]:
+                        _ev["reached_level"] = lvl_idx
+                if _elapsed >= LIQUIDITY_C_DURATION:
+                    if _ev["reached_level"] >= 0:
+                        _bonus = LIQUIDITY_C_LEVELS[_ev["reached_level"]][1]
+                        add_bonus_to_all_players(_bonus)
+                        top_viewers = load_top_viewers()
+                    liquidity_event_active = None
+            elif _ev["type"] == "D":
+                # Barra unica: si se llena antes de que termine el tiempo, bono y corta ahi
+                if _current_likes >= LIQUIDITY_D_TARGET:
+                    add_bonus_to_all_players(LIQUIDITY_D_BONUS)
+                    top_viewers = load_top_viewers()
+                    liquidity_event_active = None
+                elif _elapsed >= LIQUIDITY_D_DURATION:
+                    liquidity_event_active = None
         # --- PLAYLIST: pasar a siguiente canción cuando termina ---
         if music_playing and not pygame.mixer.music.get_busy():
             music_current_index = (music_current_index + 1) % len(music_playlist)
@@ -1618,8 +1696,8 @@ while app_running:
                         idle_voices.append(sv)
                 if idle_voices:
                     random.choice(idle_voices).play()
-        # --- MOVER PRECIO (solo si NO está congelado y NO hay voice freeze) ---
-        if not zone_frozen and not voice_freeze_active:
+        # --- MOVER PRECIO (solo si NO está congelado, NO hay voice freeze, y NO hay evento de liquidez) ---
+        if not zone_frozen and not voice_freeze_active and liquidity_event_active is None:
             if current_time - last_tick_time >= TICK_DELAY:
                 step_size = random.uniform(0.4, 1.8)
                 # Sesgo del bot: 65% probabilidad de ir en su dirección
@@ -1697,7 +1775,7 @@ while app_running:
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                 # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
-                if active_trade is None and not zone_frozen and viewer_trade_active is None and not voice_freeze_active:
+                if active_trade is None and not zone_frozen and viewer_trade_active is None and not voice_freeze_active and liquidity_event_active is None:
                     price_now = current_candle["close"]
                     # Verificar Order Block activo
                     if active_ob is not None:
@@ -2419,6 +2497,76 @@ while app_running:
                 flash_txt.set_alpha(alpha)
                 flash_rect = flash_txt.get_rect(center=(int(SCREEN_W * 0.50), int(SCREEN_H * 0.45)))
                 screen.blit(flash_txt, flash_rect)
+
+        # --- OVERLAY: EVENTOS DE LIQUIDEZ POR LIKES ---
+        if liquidity_event_active is not None:
+            _ev = liquidity_event_active
+            _elapsed = current_time - _ev["start_time"]
+            _real_likes = tiktok_chat.get_like_count() if tiktok_chat is not None else 0
+            _current_likes = _real_likes + simulated_likes
+
+            liq_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+            liq_overlay.fill((0, 0, 0, 190))
+            screen.blit(liq_overlay, (0, 0))
+
+            font_liq_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.045), bold=True)
+            font_liq_sub = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
+            font_liq_count = pygame.font.SysFont("Arial", int(SCREEN_H * 0.08), bold=True)
+
+            if _ev["type"] == "A":
+                title_txt = font_liq_title.render("SIN LIQUIDEZ EN EL MERCADO", True, (255, 60, 60))
+                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.32))))
+                sub_txt = font_liq_sub.render("PARA CONTINUAR, DEN LIKES A LA PANTALLA", True, (255, 220, 0))
+                screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                count_txt = font_liq_count.render(f"{_current_likes} / {LIQUIDITY_A_TARGET}", True, (255, 255, 255))
+                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.50))))
+                bar_w = int(SCREEN_W * 0.4)
+                bar_h = int(SCREEN_H * 0.03)
+                bar_x = SCREEN_W // 2 - bar_w // 2
+                bar_y = int(SCREEN_H * 0.58)
+                pygame.draw.rect(screen, (40, 40, 50), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
+                fill_pct = min(1.0, _current_likes / LIQUIDITY_A_TARGET)
+                pygame.draw.rect(screen, (0, 220, 255), (bar_x, bar_y, int(bar_w * fill_pct), bar_h), border_radius=6)
+                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=6)
+                remaining_s = max(0, (LIQUIDITY_A_TIMEOUT - _elapsed) // 1000)
+                timeout_txt = font_liq_sub.render(f"Reanuda automaticamente en {remaining_s}s", True, (150, 150, 160))
+                screen.blit(timeout_txt, timeout_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.65))))
+
+            elif _ev["type"] == "C":
+                title_txt = font_liq_title.render("RONDA DE LIKES", True, (0, 220, 255))
+                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.28))))
+                count_txt = font_liq_count.render(f"{_current_likes}", True, (255, 255, 255))
+                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                lvl_y = int(SCREEN_H * 0.50)
+                for lvl_idx, (lvl_likes, lvl_bonus) in enumerate(LIQUIDITY_C_LEVELS):
+                    reached = lvl_idx <= _ev["reached_level"]
+                    lvl_color = (38, 200, 154) if reached else (120, 120, 130)
+                    lvl_txt = font_liq_sub.render(f"{lvl_likes} likes -> +{lvl_bonus} FXP para todos", True, lvl_color)
+                    screen.blit(lvl_txt, lvl_txt.get_rect(center=(SCREEN_W // 2, lvl_y + lvl_idx * int(SCREEN_H * 0.04))))
+                remaining_s = max(0, (LIQUIDITY_C_DURATION - _elapsed) / 1000)
+                timer_txt = font_liq_sub.render(f"{remaining_s:.1f}s", True, (255, 220, 0))
+                screen.blit(timer_txt, timer_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.68))))
+
+            elif _ev["type"] == "D":
+                title_txt = font_liq_title.render("LLENEN LA BARRA DE LIKES", True, (255, 220, 0))
+                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.30))))
+                sub_txt = font_liq_sub.render(f"Meta: {LIQUIDITY_D_TARGET} likes -> +{LIQUIDITY_D_BONUS} FXP para todos", True, (0, 220, 255))
+                screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                bar_w = int(SCREEN_W * 0.5)
+                bar_h = int(SCREEN_H * 0.05)
+                bar_x = SCREEN_W // 2 - bar_w // 2
+                bar_y = int(SCREEN_H * 0.48)
+                pygame.draw.rect(screen, (40, 40, 50), (bar_x, bar_y, bar_w, bar_h), border_radius=8)
+                fill_pct = min(1.0, _current_likes / LIQUIDITY_D_TARGET)
+                bar_color = (38, 200, 154) if fill_pct >= 1.0 else (255, 180, 0)
+                pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_w * fill_pct), bar_h), border_radius=8)
+                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=8)
+                count_txt = font_liq_sub.render(f"{_current_likes} / {LIQUIDITY_D_TARGET}", True, (255, 255, 255))
+                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, bar_y + bar_h + int(SCREEN_H * 0.04))))
+                remaining_s = max(0, (LIQUIDITY_D_DURATION - _elapsed) / 1000)
+                timer_txt = font_liq_sub.render(f"{remaining_s:.1f}s", True, (200, 200, 210))
+                screen.blit(timer_txt, timer_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.68))))
+
         pygame.display.flip()
 
     # Parar música al salir del game loop (volver al menú)

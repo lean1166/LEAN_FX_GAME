@@ -28,11 +28,30 @@ def download_avatar(username, url):
 # Intentar importar TikTokLive
 try:
     from TikTokLive import TikTokLiveClient
-    from TikTokLive.events import CommentEvent, ConnectEvent, DisconnectEvent
+    from TikTokLive.events import CommentEvent, ConnectEvent, DisconnectEvent, LikeEvent
     TIKTOK_AVAILABLE = True
 except ImportError:
     TIKTOK_AVAILABLE = False
     print("[AVISO] TikTokLive no instalado. Ejecutá: pip install TikTokLive")
+
+
+def extract_like_count(event):
+    """
+    Extraer la cantidad de likes de un LikeEvent probando varios nombres de
+    atributo posibles (la librería TikTokLive no documenta un nombre único
+    y estable entre versiones). Devuelve 1 como fallback minimo si no se
+    encuentra ningun atributo numerico (asi al menos se cuenta el evento).
+    Loggea una sola vez que atributo funciono, para poder confirmarlo.
+    """
+    for attr in ("count", "likeCount", "like_count", "total"):
+        if hasattr(event, attr):
+            val = getattr(event, attr)
+            if isinstance(val, (int, float)) and val > 0:
+                if not getattr(extract_like_count, "_logged", False):
+                    print(f"[LIKES] Usando atributo '{attr}' del LikeEvent (valor ejemplo: {val})")
+                    extract_like_count._logged = True
+                return int(val)
+    return 1
 
 
 class TikTokChatReader:
@@ -51,6 +70,8 @@ class TikTokChatReader:
         self.reconnect_attempts = 0
         self.max_reconnect = 999  # Reintentos infinitos
         self.reconnecting = False  # Indicador para mostrar en pantalla
+        # --- Contador de likes (para el evento "liquidez por likes") ---
+        self.like_count = 0  # Se resetea con reset_like_count() al iniciar cada evento
 
     def start(self):
         """Iniciar la conexión en un hilo separado"""
@@ -84,6 +105,13 @@ class TikTokChatReader:
                 async def on_disconnect(event: DisconnectEvent):
                     self.connected = False
                     print(f"[TIKTOK] Desconectado del live")
+
+                @self.client.on(LikeEvent)
+                async def on_like(event: LikeEvent):
+                    try:
+                        self.like_count += extract_like_count(event)
+                    except Exception as like_err:
+                        print(f"[TIKTOK] Error procesando like: {like_err}")
 
                 @self.client.on(CommentEvent)
                 async def on_comment(event: CommentEvent):
@@ -175,3 +203,11 @@ class TikTokChatReader:
     def has_real_voters(self):
         """Verificar si hay voters reales (para desactivar bots)"""
         return len(self.votes) > 0
+
+    def reset_like_count(self):
+        """Reiniciar el contador de likes (al empezar un evento de liquidez)"""
+        self.like_count = 0
+
+    def get_like_count(self):
+        """Obtener el conteo de likes acumulado desde el último reset"""
+        return self.like_count

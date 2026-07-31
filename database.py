@@ -250,6 +250,19 @@ def get_recent_results(username, limit=20):
     return [r["result"] for r in rows]
 
 
+def add_bonus_to_all_players(amount):
+    """
+    Sumar un bono de FXP al balance de TODOS los viewers (no al streamer),
+    usado por los eventos de 'liquidez por likes' cuando se alcanza la meta.
+    No cuenta como win/loss, solo suma balance.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("UPDATE players SET balance = balance + ? WHERE username != 'LEAN FX'", (amount,))
+    conn.commit()
+    conn.close()
+
+
 def get_all_players_ranked():
     """Obtener todos los jugadores ordenados por balance (excluyendo streamer)"""
     conn = get_connection()
