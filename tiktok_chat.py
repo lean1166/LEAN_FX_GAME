@@ -54,6 +54,49 @@ def extract_like_count(event):
     return 1
 
 
+def extract_avatar_url(user):
+    """
+    Extraer la URL de la foto de perfil de un usuario de TikTokLive probando
+    varias rutas posibles. En V1 se usaba user.avatar_jpg / user.avatar_url,
+    que NO EXISTEN en el modelo real de la librería (por eso nunca funcionó
+    la foto de perfil) - la imagen en realidad viene en un objeto tipo
+    "avatar_thumb" con una lista de URLs (m_urls / urls / url_list), del cual
+    conviene tomar la última (suele ser la de mayor resolución).
+    Loggea una sola vez qué ruta funcionó, para poder confirmarlo en un live real.
+    """
+    candidates = [
+        ("avatar_thumb", ("m_urls", "urls", "url_list")),
+        ("avatar_medium", ("m_urls", "urls", "url_list")),
+        ("avatar_large", ("m_urls", "urls", "url_list")),
+        ("profile_picture", ("m_urls", "urls", "url_list")),
+    ]
+    for obj_attr, list_attrs in candidates:
+        obj = getattr(user, obj_attr, None)
+        if obj is None:
+            continue
+        for list_attr in list_attrs:
+            url_list = getattr(obj, list_attr, None)
+            if url_list:
+                try:
+                    url = url_list[-1]
+                except (IndexError, TypeError):
+                    continue
+                if url:
+                    if not getattr(extract_avatar_url, "_logged", False):
+                        print(f"[AVATAR] Usando user.{obj_attr}.{list_attr}[-1] (ejemplo: {url})")
+                        extract_avatar_url._logged = True
+                    return url
+    # Fallbacks simples (por si en alguna version son strings directos)
+    for attr in ("avatar_url", "avatar_jpg", "avatarUrl"):
+        val = getattr(user, attr, None)
+        if isinstance(val, str) and val:
+            if not getattr(extract_avatar_url, "_logged", False):
+                print(f"[AVATAR] Usando user.{attr} (string directo, ejemplo: {val})")
+                extract_avatar_url._logged = True
+            return val
+    return ""
+
+
 class TikTokChatReader:
     """Lee el chat de TikTok Live en un hilo separado"""
 
@@ -119,11 +162,7 @@ class TikTokChatReader:
                         username = event.user.nickname or str(event.user.id)
                         unique_id = str(event.user.id)
                         comment = event.comment.strip().upper()
-                        avatar_url = ""
-                        if hasattr(event.user, 'avatar_jpg') and event.user.avatar_jpg:
-                            avatar_url = event.user.avatar_jpg
-                        elif hasattr(event.user, 'avatar_url') and event.user.avatar_url:
-                            avatar_url = event.user.avatar_url
+                        avatar_url = extract_avatar_url(event.user)
 
                         # Guardar todos los comentarios (debug)
                         self.all_comments.append({
