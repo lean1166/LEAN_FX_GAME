@@ -1630,13 +1630,9 @@ while app_running:
         # --- SISTEMA DE LIQUIDEZ POR LIKES ---
         # Disparar un nuevo evento cada LIQUIDITY_EVENT_INTERVAL, pero solo si
         # no hay un trade/zona en curso (no interrumpe una operación activa)
-        if game_started and not hasattr(pygame, '_liq_debug_last') or (game_started and current_time - getattr(pygame, '_liq_debug_last', 0) > 5000):
-            pygame._liq_debug_last = current_time
-            print(f"[LIQUIDEZ DEBUG] elapsed={current_time - liquidity_last_trigger}ms / {LIQUIDITY_EVENT_INTERVAL}ms | zone_frozen={zone_frozen} active_trade={active_trade is not None} viewer_trade={viewer_trade_active is not None} voice_freeze={voice_freeze_active} event_active={liquidity_event_active is not None}")
         if (game_started and liquidity_event_active is None and not zone_frozen
                 and active_trade is None and viewer_trade_active is None and not voice_freeze_active
                 and current_time - liquidity_last_trigger >= LIQUIDITY_EVENT_INTERVAL):
-            print(f"[LIQUIDEZ] Disparando evento (tipo {LIQUIDITY_EVENT_TYPES[liquidity_event_index % len(LIQUIDITY_EVENT_TYPES)]})")
             liquidity_last_trigger = current_time
             event_type = LIQUIDITY_EVENT_TYPES[liquidity_event_index % len(LIQUIDITY_EVENT_TYPES)]
             liquidity_event_index += 1
@@ -1660,6 +1656,7 @@ while app_running:
                 # Evento bloqueante: nada de trading hasta juntar la meta o hasta el timeout de seguridad
                 if _current_likes >= LIQUIDITY_A_TARGET or _elapsed >= LIQUIDITY_A_TIMEOUT:
                     liquidity_event_active = None
+                    last_candle_time = current_time
             elif _ev["type"] == "C":
                 # Rondas por nivel: se paga el nivel mas alto alcanzado, se reanuda siempre al terminar el tiempo
                 for lvl_idx, (lvl_likes, lvl_bonus) in enumerate(LIQUIDITY_C_LEVELS):
@@ -1671,14 +1668,17 @@ while app_running:
                         add_bonus_to_all_players(_bonus)
                         top_viewers = load_top_viewers()
                     liquidity_event_active = None
+                    last_candle_time = current_time
             elif _ev["type"] == "D":
                 # Barra unica: si se llena antes de que termine el tiempo, bono y corta ahi
                 if _current_likes >= LIQUIDITY_D_TARGET:
                     add_bonus_to_all_players(LIQUIDITY_D_BONUS)
                     top_viewers = load_top_viewers()
                     liquidity_event_active = None
+                    last_candle_time = current_time
                 elif _elapsed >= LIQUIDITY_D_DURATION:
                     liquidity_event_active = None
+                    last_candle_time = current_time
         # --- PLAYLIST: pasar a siguiente canción cuando termina ---
         if music_playing and not pygame.mixer.music.get_busy():
             music_current_index = (music_current_index + 1) % len(music_playlist)
@@ -1936,7 +1936,7 @@ while app_running:
                 viewer_votes = []
                 if active_trade is None:
                     viewer_votes_display = []
-        if not zone_frozen and not voice_freeze_active and current_time - last_candle_time >= CANDLE_DURATION:
+        if not zone_frozen and not voice_freeze_active and liquidity_event_active is None and current_time - last_candle_time >= CANDLE_DURATION:
             candles.append(current_candle.copy())
             if len(candles) > 1000:
                 candles.pop(0)
