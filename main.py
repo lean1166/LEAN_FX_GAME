@@ -320,12 +320,12 @@ LIQUIDITY_EVENT_INTERVAL = int(get_config("liq_interval_min", "10")) * 60000  # 
 LIQUIDITY_A_TARGET = int(get_config("liq_a_target", "100"))        # Likes necesarios para reanudar (evento bloqueante)
 LIQUIDITY_A_TIMEOUT = 45000     # 45s: si no se llega a la meta, se reanuda igual (seguridad, no configurable)
 LIQUIDITY_C_DURATION = 15000    # 15s de duracion (no configurable)
-LIQUIDITY_C_BASE = int(get_config("liq_c_base", "100"))            # Meta likes del nivel 1 (nivel 2 y 3 son x2 y x4)
-LIQUIDITY_C_BONUS_BASE = int(get_config("liq_c_bonus_base", "500"))  # Bono FXP del nivel 1 (nivel 2 y 3 son x2 y x4)
+# Los 3 niveles del Evento C son totalmente independientes (cada uno con su
+# propia meta de likes y su propio bono FXP, ajustables por separado)
 LIQUIDITY_C_LEVELS = [
-    (LIQUIDITY_C_BASE, LIQUIDITY_C_BONUS_BASE),
-    (LIQUIDITY_C_BASE * 2, LIQUIDITY_C_BONUS_BASE * 2),
-    (LIQUIDITY_C_BASE * 4, LIQUIDITY_C_BONUS_BASE * 4),
+    (int(get_config("liq_c1_likes", "100")), int(get_config("liq_c1_bonus", "500"))),
+    (int(get_config("liq_c2_likes", "200")), int(get_config("liq_c2_bonus", "1000"))),
+    (int(get_config("liq_c3_likes", "400")), int(get_config("liq_c3_bonus", "2000"))),
 ]
 LIQUIDITY_D_DURATION = 20000    # 20s de duracion (no configurable)
 LIQUIDITY_D_TARGET = int(get_config("liq_d_target", "150"))        # Meta unica para llenar la barra
@@ -1274,8 +1274,12 @@ while app_running:
                 # --- Sistema de liquidez por likes ---
                 cfg_liq_interval = int(get_config("liq_interval_min", "10"))
                 cfg_liq_a_target = int(get_config("liq_a_target", "100"))
-                cfg_liq_c_base = int(get_config("liq_c_base", "100"))
-                cfg_liq_c_bonus_base = int(get_config("liq_c_bonus_base", "500"))
+                cfg_liq_c1_likes = int(get_config("liq_c1_likes", "100"))
+                cfg_liq_c1_bonus = int(get_config("liq_c1_bonus", "500"))
+                cfg_liq_c2_likes = int(get_config("liq_c2_likes", "200"))
+                cfg_liq_c2_bonus = int(get_config("liq_c2_bonus", "1000"))
+                cfg_liq_c3_likes = int(get_config("liq_c3_likes", "400"))
+                cfg_liq_c3_bonus = int(get_config("liq_c3_bonus", "2000"))
                 cfg_liq_d_target = int(get_config("liq_d_target", "150"))
                 cfg_liq_d_bonus = int(get_config("liq_d_bonus", "800"))
                 # Opciones de config
@@ -1291,8 +1295,12 @@ while app_running:
                     {"label": "-- LIQUIDEZ POR LIKES --", "key": "liq_header", "type": "header"},
                     {"label": "Evento cada (minutos)", "key": "liq_interval", "type": "number", "min": 2, "max": 30, "step": 1},
                     {"label": "Meta likes (Evento A)", "key": "liq_a_target", "type": "number", "min": 20, "max": 500, "step": 10},
-                    {"label": "Meta likes Nivel 1 (Evento C)", "key": "liq_c_base", "type": "number", "min": 20, "max": 300, "step": 10},
-                    {"label": "Bono FXP Nivel 1 (Evento C)", "key": "liq_c_bonus_base", "type": "number", "min": 100, "max": 2000, "step": 100},
+                    {"label": "Evento C - Nivel 1: likes", "key": "liq_c1_likes", "type": "number", "min": 20, "max": 500, "step": 10},
+                    {"label": "Evento C - Nivel 1: bono FXP", "key": "liq_c1_bonus", "type": "number", "min": 100, "max": 3000, "step": 100},
+                    {"label": "Evento C - Nivel 2: likes", "key": "liq_c2_likes", "type": "number", "min": 20, "max": 800, "step": 10},
+                    {"label": "Evento C - Nivel 2: bono FXP", "key": "liq_c2_bonus", "type": "number", "min": 100, "max": 5000, "step": 100},
+                    {"label": "Evento C - Nivel 3: likes", "key": "liq_c3_likes", "type": "number", "min": 20, "max": 1500, "step": 10},
+                    {"label": "Evento C - Nivel 3: bono FXP", "key": "liq_c3_bonus", "type": "number", "min": 100, "max": 8000, "step": 100},
                     {"label": "Meta likes (Evento D)", "key": "liq_d_target", "type": "number", "min": 20, "max": 500, "step": 10},
                     {"label": "Bono FXP (Evento D)", "key": "liq_d_bonus", "type": "number", "min": 100, "max": 3000, "step": 100},
                     {"label": "RESET RANKING", "key": "reset", "type": "button"},
@@ -1349,8 +1357,12 @@ while app_running:
                             elif opt["key"] == "vol_fx": val = cfg_vol_fx
                             elif opt["key"] == "liq_interval": val = cfg_liq_interval
                             elif opt["key"] == "liq_a_target": val = cfg_liq_a_target
-                            elif opt["key"] == "liq_c_base": val = cfg_liq_c_base
-                            elif opt["key"] == "liq_c_bonus_base": val = cfg_liq_c_bonus_base
+                            elif opt["key"] == "liq_c1_likes": val = cfg_liq_c1_likes
+                            elif opt["key"] == "liq_c1_bonus": val = cfg_liq_c1_bonus
+                            elif opt["key"] == "liq_c2_likes": val = cfg_liq_c2_likes
+                            elif opt["key"] == "liq_c2_bonus": val = cfg_liq_c2_bonus
+                            elif opt["key"] == "liq_c3_likes": val = cfg_liq_c3_likes
+                            elif opt["key"] == "liq_c3_bonus": val = cfg_liq_c3_bonus
                             elif opt["key"] == "liq_d_target": val = cfg_liq_d_target
                             elif opt["key"] == "liq_d_bonus": val = cfg_liq_d_bonus
                             else: val = 0
@@ -1430,8 +1442,12 @@ while app_running:
                                     _set_cfg("vol_fx", str(cfg_vol_fx))
                                     _set_cfg("liq_interval_min", str(cfg_liq_interval))
                                     _set_cfg("liq_a_target", str(cfg_liq_a_target))
-                                    _set_cfg("liq_c_base", str(cfg_liq_c_base))
-                                    _set_cfg("liq_c_bonus_base", str(cfg_liq_c_bonus_base))
+                                    _set_cfg("liq_c1_likes", str(cfg_liq_c1_likes))
+                                    _set_cfg("liq_c1_bonus", str(cfg_liq_c1_bonus))
+                                    _set_cfg("liq_c2_likes", str(cfg_liq_c2_likes))
+                                    _set_cfg("liq_c2_bonus", str(cfg_liq_c2_bonus))
+                                    _set_cfg("liq_c3_likes", str(cfg_liq_c3_likes))
+                                    _set_cfg("liq_c3_bonus", str(cfg_liq_c3_bonus))
                                     _set_cfg("liq_d_target", str(cfg_liq_d_target))
                                     _set_cfg("liq_d_bonus", str(cfg_liq_d_bonus))
                                     # Aplicar al juego
@@ -1444,9 +1460,9 @@ while app_running:
                                     LIQUIDITY_EVENT_INTERVAL = cfg_liq_interval * 60000
                                     LIQUIDITY_A_TARGET = cfg_liq_a_target
                                     LIQUIDITY_C_LEVELS = [
-                                        (cfg_liq_c_base, cfg_liq_c_bonus_base),
-                                        (cfg_liq_c_base * 2, cfg_liq_c_bonus_base * 2),
-                                        (cfg_liq_c_base * 4, cfg_liq_c_bonus_base * 4),
+                                        (cfg_liq_c1_likes, cfg_liq_c1_bonus),
+                                        (cfg_liq_c2_likes, cfg_liq_c2_bonus),
+                                        (cfg_liq_c3_likes, cfg_liq_c3_bonus),
                                     ]
                                     LIQUIDITY_D_TARGET = cfg_liq_d_target
                                     LIQUIDITY_D_BONUS = cfg_liq_d_bonus
@@ -1495,10 +1511,18 @@ while app_running:
                                             cfg_liq_interval = max(opt["min"], min(opt["max"], cfg_liq_interval + opt["step"] * direction))
                                         elif opt["key"] == "liq_a_target":
                                             cfg_liq_a_target = max(opt["min"], min(opt["max"], cfg_liq_a_target + opt["step"] * direction))
-                                        elif opt["key"] == "liq_c_base":
-                                            cfg_liq_c_base = max(opt["min"], min(opt["max"], cfg_liq_c_base + opt["step"] * direction))
-                                        elif opt["key"] == "liq_c_bonus_base":
-                                            cfg_liq_c_bonus_base = max(opt["min"], min(opt["max"], cfg_liq_c_bonus_base + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c1_likes":
+                                            cfg_liq_c1_likes = max(opt["min"], min(opt["max"], cfg_liq_c1_likes + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c1_bonus":
+                                            cfg_liq_c1_bonus = max(opt["min"], min(opt["max"], cfg_liq_c1_bonus + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c2_likes":
+                                            cfg_liq_c2_likes = max(opt["min"], min(opt["max"], cfg_liq_c2_likes + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c2_bonus":
+                                            cfg_liq_c2_bonus = max(opt["min"], min(opt["max"], cfg_liq_c2_bonus + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c3_likes":
+                                            cfg_liq_c3_likes = max(opt["min"], min(opt["max"], cfg_liq_c3_likes + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c3_bonus":
+                                            cfg_liq_c3_bonus = max(opt["min"], min(opt["max"], cfg_liq_c3_bonus + opt["step"] * direction))
                                         elif opt["key"] == "liq_d_target":
                                             cfg_liq_d_target = max(opt["min"], min(opt["max"], cfg_liq_d_target + opt["step"] * direction))
                                         elif opt["key"] == "liq_d_bonus":
