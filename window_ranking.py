@@ -138,9 +138,9 @@ while running:
                 screen.blit(arrow_txt, arrow_txt.get_rect(center=(arrow_x, ny)))
 
             nx, ny = pos["name"]
-            v_avatar = get_viewer_avatar(viewer_name, 22)
+            v_avatar = get_viewer_avatar(viewer_name, 30)
             if v_avatar is not None:
-                screen.blit(v_avatar, (nx - 60, ny - v_avatar.get_height() // 2))
+                screen.blit(v_avatar, (nx - 45, ny - v_avatar.get_height() // 2))
             max_name_w = 200
             name_font_size = 20
             font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
