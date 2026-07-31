@@ -154,9 +154,9 @@ while running:
 
             # --- NOMBRE + avatar circulito ---
             nx, ny = pos["name"]
-            v_avatar = get_viewer_avatar(viewer_name, int(44 * SCALE))
+            v_avatar = get_viewer_avatar(viewer_name, int(32 * SCALE))
             if v_avatar is not None:
-                screen.blit(v_avatar, (nx - int(65 * SCALE), ny - v_avatar.get_height() // 2))
+                screen.blit(v_avatar, (nx - int(75 * SCALE), ny - v_avatar.get_height() // 2))
             # Nombre con autoescalado si es muy largo
             max_name_w = int(280 * SCALE)
             name_font_size = max(12, int(28 * SCALE))
