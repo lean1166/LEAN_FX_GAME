@@ -1630,9 +1630,13 @@ while app_running:
         # --- SISTEMA DE LIQUIDEZ POR LIKES ---
         # Disparar un nuevo evento cada LIQUIDITY_EVENT_INTERVAL, pero solo si
         # no hay un trade/zona en curso (no interrumpe una operación activa)
+        if game_started and not hasattr(pygame, '_liq_debug_last') or (game_started and current_time - getattr(pygame, '_liq_debug_last', 0) > 5000):
+            pygame._liq_debug_last = current_time
+            print(f"[LIQUIDEZ DEBUG] elapsed={current_time - liquidity_last_trigger}ms / {LIQUIDITY_EVENT_INTERVAL}ms | zone_frozen={zone_frozen} active_trade={active_trade is not None} viewer_trade={viewer_trade_active is not None} voice_freeze={voice_freeze_active} event_active={liquidity_event_active is not None}")
         if (game_started and liquidity_event_active is None and not zone_frozen
                 and active_trade is None and viewer_trade_active is None and not voice_freeze_active
                 and current_time - liquidity_last_trigger >= LIQUIDITY_EVENT_INTERVAL):
+            print(f"[LIQUIDEZ] Disparando evento (tipo {LIQUIDITY_EVENT_TYPES[liquidity_event_index % len(LIQUIDITY_EVENT_TYPES)]})")
             liquidity_last_trigger = current_time
             event_type = LIQUIDITY_EVENT_TYPES[liquidity_event_index % len(LIQUIDITY_EVENT_TYPES)]
             liquidity_event_index += 1
