@@ -18,6 +18,8 @@ from tiktok_chat import TikTokChatReader, TIKTOK_AVAILABLE
 try:
     pygame.init()
     pygame.mixer.init()
+    pygame.mixer.set_num_channels(16)
+    voice_channel = pygame.mixer.Channel(15)  # Canal dedicado para voces (evita que se superpongan)
     # Detectar resolución de pantalla automáticamente
     display_info = pygame.display.Info()
     SCREEN_W = display_info.current_w
@@ -110,7 +112,7 @@ total_operations = 0  # Contador de operaciones totales en el stream
 # Freeze por voz: congela el gráfico mientras habla (WIN/LOSS/LEAN FX)
 voice_freeze_active = False
 voice_freeze_start = 0
-VOICE_FREEZE_DURATION = 5000  # 5 seg máximo de freeze por voz de resultado
+VOICE_FREEZE_DURATION = 15000  # Respaldo de seguridad (normalmente se descongela cuando el audio termina de verdad)
 # --- STREAK SYSTEM ---
 viewer_streaks = {}  # {"username": current_streak_count}
 streak_display = None  # {"name": str, "streak": int, "start_time": ms} activo en pantalla
@@ -1600,11 +1602,11 @@ while app_running:
                         play_sound(sound_bos)
                         # Voz LEAN FX anuncia su trade
                         if bot_decision == "BUY" and lean_buy_voices:
-                            random.choice(lean_buy_voices).play()
+                            voice_channel.play(random.choice(lean_buy_voices))
                             voice_freeze_active = True
                             voice_freeze_start = current_time
                         elif bot_decision == "SELL" and lean_sell_voices:
-                            random.choice(lean_sell_voices).play()
+                            voice_channel.play(random.choice(lean_sell_voices))
                             voice_freeze_active = True
                             voice_freeze_start = current_time
                 zone_frozen = False
@@ -1634,8 +1636,9 @@ while app_running:
                 zone_detected = None
                 trade_decided = False
                 last_tick_second = -1
-        # --- Descongelar voice freeze ---
-        if voice_freeze_active and current_time - voice_freeze_start > VOICE_FREEZE_DURATION:
+        # --- Descongelar voice freeze: recien cuando el audio termino de sonar de verdad ---
+        # (VOICE_FREEZE_DURATION es solo un respaldo de seguridad por si el canal falla)
+        if voice_freeze_active and (not voice_channel.get_busy() or current_time - voice_freeze_start > VOICE_FREEZE_DURATION):
             voice_freeze_active = False
         # --- PLAYLIST: pasar a siguiente canción cuando termina ---
         if music_playing and not pygame.mixer.music.get_busy():
@@ -1658,8 +1661,8 @@ while app_running:
                     sv = load_sound(f"IDLE_VOZ_{i}.mp3")
                     if sv is not None:
                         idle_voices.append(sv)
-                if idle_voices:
-                    random.choice(idle_voices).play()
+                if idle_voices and not voice_channel.get_busy():
+                    voice_channel.play(random.choice(idle_voices))
         # --- MOVER PRECIO (solo si NO está congelado y NO hay voice freeze) ---
         if not zone_frozen and not voice_freeze_active:
             if current_time - last_tick_time >= TICK_DELAY:
@@ -1689,7 +1692,7 @@ while app_running:
                             flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                             total_operations += 1
                             if voz_win_voices and viewer_trade_active is None:
-                                random.choice(voz_win_voices).play()
+                                voice_channel.play(random.choice(voz_win_voices))
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                         elif current_price <= active_trade["sl"]:
@@ -1704,7 +1707,7 @@ while app_running:
                             flash_text = "LOSS -1%"
                             total_operations += 1
                             if voz_loss_voices and viewer_trade_active is None:
-                                random.choice(voz_loss_voices).play()
+                                voice_channel.play(random.choice(voz_loss_voices))
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                     elif active_trade["type"] == "SELL":
@@ -1720,7 +1723,7 @@ while app_running:
                             flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                             total_operations += 1
                             if voz_win_voices and viewer_trade_active is None:
-                                random.choice(voz_win_voices).play()
+                                voice_channel.play(random.choice(voz_win_voices))
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                         elif current_price >= active_trade["sl"]:
@@ -1735,7 +1738,7 @@ while app_running:
                             flash_text = "LOSS -1%"
                             total_operations += 1
                             if voz_loss_voices and viewer_trade_active is None:
-                                random.choice(voz_loss_voices).play()
+                                voice_channel.play(random.choice(voz_loss_voices))
                                 voice_freeze_active = True
                                 voice_freeze_start = current_time
                 # --- DETECTAR SI PRECIO LLEGA A UNA ZONA (solo 1 vez por zona) ---
@@ -1769,7 +1772,9 @@ while app_running:
                                 while vi == zona_voice_last and len(zona_voices) > 1:
                                     vi = random.randint(0, len(zona_voices) - 1)
                                 zona_voice_last = vi
-                                zona_voices[vi].play()
+                                voice_channel.play(zona_voices[vi])
+                                voice_freeze_active = True
+                                voice_freeze_start = current_time
                     # Verificar Decisional
                     if not zone_frozen and active_decisional is not None:
                         zone_id = f"dec_{active_decisional['index']}"
@@ -1788,7 +1793,9 @@ while app_running:
                                 while vi == zona_voice_last and len(zona_voices) > 1:
                                     vi = random.randint(0, len(zona_voices) - 1)
                                 zona_voice_last = vi
-                                zona_voices[vi].play()
+                                voice_channel.play(zona_voices[vi])
+                                voice_freeze_active = True
+                                voice_freeze_start = current_time
                     # FVG NO se opera por ahora (solo se dibuja)
                     # if not zone_frozen and active_fvg is not None:
                     #     zone_id = f"fvg_{active_fvg['index']}"
@@ -1867,7 +1874,7 @@ while app_running:
                     flash_text = f"WIN +{int(TP_MULTIPLIER)}%"
                     total_operations += 1
                     if voz_win_voices:
-                        random.choice(voz_win_voices).play()
+                        voice_channel.play(random.choice(voz_win_voices))
                         voice_freeze_active = True
                         voice_freeze_start = current_time
                 else:
@@ -1877,7 +1884,7 @@ while app_running:
                     flash_text = "LOSS -1%"
                     total_operations += 1
                     if voz_loss_voices:
-                        random.choice(voz_loss_voices).play()
+                        voice_channel.play(random.choice(voz_loss_voices))
                         voice_freeze_active = True
                         voice_freeze_start = current_time
                 # Refrescar TOP 5 después de resolver
