@@ -2560,7 +2560,8 @@ while app_running:
 
             font_liq_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.048), bold=True)
             font_liq_sub = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
-            font_liq_count = pygame.font.SysFont("Arial", int(SCREEN_H * 0.085), bold=True)
+            font_liq_count = pygame.font.SysFont("Arial", int(SCREEN_H * 0.11), bold=True)  # Contador de likes: mas grande, legible en vertical
+            font_liq_levels = pygame.font.SysFont("Arial", int(SCREEN_H * 0.032), bold=True)  # Niveles/meta: mas grande, legible en vertical
 
             if _ev["type"] == "A":
                 title_txt = font_liq_title.render("SIN LIQUIDEZ EN EL MERCADO", True, (255, 60, 60))
@@ -2594,12 +2595,12 @@ while app_running:
                     reached = lvl_idx <= _ev["reached_level"]
                     # Flash: el nivel recien alcanzado crece y brilla un instante
                     is_new = reached and lvl_idx == _ev["reached_level"] and _flash_start is not None and current_time - _flash_start < 600
-                    lvl_color = (38, 220, 170) if reached else (120, 120, 130)
-                    lvl_size = int(SCREEN_H * (0.026 if is_new else 0.022))
+                    lvl_color = (38, 220, 170) if reached else (150, 150, 165)
+                    lvl_size = int(SCREEN_H * (0.038 if is_new else 0.032))
                     font_lvl = pygame.font.SysFont("Arial", lvl_size, bold=True)
                     prefix = "\u2713 " if reached else ""
-                    lvl_txt = font_lvl.render(f"{prefix}{lvl_likes} likes -> +{lvl_bonus} FXP para todos", True, lvl_color)
-                    screen.blit(lvl_txt, lvl_txt.get_rect(center=(SCREEN_W // 2, lvl_y + lvl_idx * int(SCREEN_H * 0.045))))
+                    lvl_txt = font_lvl.render(f"{prefix}{lvl_likes} likes -> +{lvl_bonus} FXP", True, lvl_color)
+                    screen.blit(lvl_txt, lvl_txt.get_rect(center=(SCREEN_W // 2, lvl_y + lvl_idx * int(SCREEN_H * 0.06))))
                 remaining_s = max(0, (LIQUIDITY_C_DURATION - _elapsed) / 1000)
                 timer_txt = font_liq_sub.render(f"{remaining_s:.1f}s", True, (255, 220, 0))
                 screen.blit(timer_txt, timer_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.70))))
@@ -2607,7 +2608,7 @@ while app_running:
             elif _ev["type"] == "D":
                 title_txt = font_liq_title.render("LLENEN LA BARRA DE LIKES", True, (255, 220, 0))
                 screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.28))))
-                sub_txt = font_liq_sub.render(f"Meta: {LIQUIDITY_D_TARGET} likes -> +{LIQUIDITY_D_BONUS} FXP para todos", True, (0, 220, 255))
+                sub_txt = font_liq_levels.render(f"Meta: {LIQUIDITY_D_TARGET} likes -> +{LIQUIDITY_D_BONUS} FXP", True, (0, 220, 255))
                 screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.37))))
                 # Barra mas grande (era 0.5 ancho x 0.05 alto, ahora 0.6 x 0.07)
                 bar_w = int(SCREEN_W * 0.6)
