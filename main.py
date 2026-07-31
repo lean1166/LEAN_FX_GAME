@@ -1642,6 +1642,8 @@ while app_running:
             music_current_index = (music_current_index + 1) % len(music_playlist)
             try:
                 pygame.mixer.music.load(music_playlist[music_current_index])
+                vol = int(get_config("vol_music", "30")) / 100.0
+                pygame.mixer.music.set_volume(vol)
                 pygame.mixer.music.play()
             except:
                 pass
