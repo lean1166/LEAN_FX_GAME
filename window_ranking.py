@@ -43,14 +43,10 @@ panel_img_raw = None
 if panel_path:
     panel_img_raw = pygame.image.load(panel_path)
 
-# --- Posicionar la ventana (arriba a la derecha, debajo del panel streamer) ---
-_info = pygame.display.Info()
-_desktop_w, _desktop_h = _info.current_w, _info.current_h
-_pos_x = max(0, _desktop_w - WINDOW_W - 20)
-_pos_y = 280
-os.environ['SDL_VIDEO_WINDOW_POS'] = f"{_pos_x},{_pos_y}"
+# --- Posicionar la ventana (esquina superior izquierda para que entre completa) ---
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
 
-screen = pygame.display.set_mode((WINDOW_W, WINDOW_H), pygame.NOFRAME)
+screen = pygame.display.set_mode((WINDOW_W, WINDOW_H))
 pygame.display.set_caption("LEAN FX - TOP 5 RANKING")
 
 icon_path = find_asset("icon.png", "icon.ico")
