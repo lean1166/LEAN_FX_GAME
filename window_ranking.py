@@ -22,17 +22,18 @@ from database import get_top_players
 REFRESH_INTERVAL_MS = 2000
 HIGHLIGHT_DURATION_MS = 2500
 
-# Tamaño de la ventana = tamaño de la imagen
-WINDOW_W, WINDOW_H = 1920, 1080
+# Tamaño de la ventana (mitad de 1920x1080 para que tenga barra de titulo y se pueda mover)
+WINDOW_W, WINDOW_H = 960, 540
+# Las posiciones de clicks fueron calibradas en 1920x1080, se escalan proporcionalmente
+SCALE = WINDOW_W / 1920  # 0.5
 
-# Posiciones calibradas por el usuario (clicks directos en 1920x1080)
-# Cada fila: nombre_xy, balance_xy, win_xy, loss_xy, winrate_xy
+# Posiciones calibradas por el usuario (clicks directos en 1920x1080, escaladas a WINDOW)
 CARD_POSITIONS = [
-    {"name": (448, 249), "bal": (800, 244), "w": (1029, 256), "l": (1233, 255), "wr": (1425, 256)},
-    {"name": (441, 380), "bal": (801, 378), "w": (1035, 390), "l": (1235, 389), "wr": (1422, 390)},
-    {"name": (437, 516), "bal": (799, 516), "w": (1033, 528), "l": (1233, 530), "wr": (1424, 529)},
-    {"name": (443, 654), "bal": (786, 654), "w": (1035, 668), "l": (1236, 666), "wr": (1439, 664)},
-    {"name": (438, 794), "bal": (781, 791), "w": (1034, 803), "l": (1233, 805), "wr": (1428, 800)},
+    {"name": (int(448*SCALE), int(249*SCALE)), "bal": (int(800*SCALE), int(244*SCALE)), "w": (int(1029*SCALE), int(256*SCALE)), "l": (int(1233*SCALE), int(255*SCALE)), "wr": (int(1425*SCALE), int(256*SCALE))},
+    {"name": (int(441*SCALE), int(380*SCALE)), "bal": (int(801*SCALE), int(378*SCALE)), "w": (int(1035*SCALE), int(390*SCALE)), "l": (int(1235*SCALE), int(389*SCALE)), "wr": (int(1422*SCALE), int(390*SCALE))},
+    {"name": (int(437*SCALE), int(516*SCALE)), "bal": (int(799*SCALE), int(516*SCALE)), "w": (int(1033*SCALE), int(528*SCALE)), "l": (int(1233*SCALE), int(530*SCALE)), "wr": (int(1424*SCALE), int(529*SCALE))},
+    {"name": (int(443*SCALE), int(654*SCALE)), "bal": (int(786*SCALE), int(654*SCALE)), "w": (int(1035*SCALE), int(668*SCALE)), "l": (int(1236*SCALE), int(666*SCALE)), "wr": (int(1439*SCALE), int(664*SCALE))},
+    {"name": (int(438*SCALE), int(794*SCALE)), "bal": (int(781*SCALE), int(791*SCALE)), "w": (int(1034*SCALE), int(803*SCALE)), "l": (int(1233*SCALE), int(805*SCALE)), "wr": (int(1428*SCALE), int(800*SCALE))},
 ]
 
 pygame.init()
@@ -66,11 +67,11 @@ if panel_img_raw is not None:
     if panel_img.get_size() != (WINDOW_W, WINDOW_H):
         panel_img = pygame.transform.smoothscale(panel_img, (WINDOW_W, WINDOW_H))
 
-# Fuentes
-font_name = pygame.font.SysFont("Arial", 28, bold=True)
-font_bal = pygame.font.SysFont("Arial", 22, bold=True)
-font_stat = pygame.font.SysFont("Arial", 24, bold=True)
-font_arrow = pygame.font.SysFont("Arial", 22, bold=True)
+# Fuentes (escaladas al tamaño de ventana)
+font_name = pygame.font.SysFont("Arial", max(12, int(28 * SCALE)), bold=True)
+font_bal = pygame.font.SysFont("Arial", max(10, int(22 * SCALE)), bold=True)
+font_stat = pygame.font.SysFont("Arial", max(10, int(24 * SCALE)), bold=True)
+font_arrow = pygame.font.SysFont("Arial", max(10, int(22 * SCALE)), bold=True)
 
 
 def load_top_viewers():
@@ -142,7 +143,7 @@ while running:
                 h_elapsed = current_time - highlight_info["start_time"]
                 h_alpha = max(0, 1.0 - (h_elapsed / HIGHLIGHT_DURATION_MS))
                 nx, ny = pos["name"]
-                arrow_x = nx + 120
+                arrow_x = nx + int(120 * SCALE)
                 if highlight_info["type"] == "up":
                     arrow_color = (0, int(255 * h_alpha), 0)
                     arrow_txt = font_arrow.render("\u25B2", True, arrow_color)
@@ -153,12 +154,12 @@ while running:
 
             # --- NOMBRE + avatar circulito ---
             nx, ny = pos["name"]
-            v_avatar = get_viewer_avatar(viewer_name, 32)
+            v_avatar = get_viewer_avatar(viewer_name, int(32 * SCALE))
             if v_avatar is not None:
-                screen.blit(v_avatar, (nx - 90, ny - v_avatar.get_height() // 2))
+                screen.blit(v_avatar, (nx - int(90 * SCALE), ny - v_avatar.get_height() // 2))
             # Nombre con autoescalado si es muy largo
-            max_name_w = 280
-            name_font_size = 28
+            max_name_w = int(280 * SCALE)
+            name_font_size = max(12, int(28 * SCALE))
             font_name_dyn = pygame.font.SysFont("Arial", name_font_size, bold=True)
             n_txt = font_name_dyn.render(viewer_name, True, (255, 255, 255))
             while n_txt.get_width() > max_name_w and name_font_size > 12:
