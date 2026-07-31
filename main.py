@@ -1269,8 +1269,6 @@ while app_running:
                 cfg_bot_enabled = get_config("bot_enabled", "1") == "1"
                 cfg_bot_wr = int(float(get_config("bot_win_rate", "0.70")) * 100)
                 cfg_viewers_enabled = get_config("viewers_enabled", "1") == "1"
-                from database import DB_PATH as _dbg_db_path
-                print(f"[DEBUG CONFIG] DB_PATH={_dbg_db_path} | vol_music RAW={get_config('vol_music', 'SIN_VALOR')!r}")
                 cfg_vol_music = int(get_config("vol_music", "30"))
                 cfg_vol_fx = int(get_config("vol_fx", "100"))
                 # --- Sistema de liquidez por likes ---
