@@ -14,7 +14,18 @@ _cache = {}  # {(username, size): pygame.Surface or None}
 
 
 def get_viewer_avatar(username, size=24):
-    """Cargar avatar de viewer recortado en círculo con borde cyan. Retorna Surface o None."""
+    """
+    Cargar avatar de viewer recortado en círculo con borde cyan. Retorna Surface o None.
+
+    IMPORTANTE: solo se cachea el resultado cuando SÍ se encuentra la imagen.
+    Si todavía no existe el archivo (la descarga en background de
+    tiktok_chat.py puede tardar unos milisegundos por la red), se devuelve
+    None SIN cachear, para que el próximo frame vuelva a intentar leer el
+    disco. Antes se cacheaba None de forma permanente apenas se pedía la
+    imagen por primera vez (casi siempre antes de que terminara de
+    descargarse), y esa foto ya no se volvía a cargar nunca más aunque el
+    archivo apareciera después.
+    """
     key = (username, size)
     if key in _cache:
         return _cache[key]
@@ -36,7 +47,5 @@ def get_viewer_avatar(username, size=24):
                 return final
             except Exception as e:
                 print(f"[AVATAR] Error cargando {username}: {e}")
-                _cache[key] = None
                 return None
-    _cache[key] = None
     return None
