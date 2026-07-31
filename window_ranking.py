@@ -188,7 +188,7 @@ while running:
             screen.blit(w_txt, w_txt.get_rect(center=(wx, wy)))
 
             # --- LOSS ---
-            lx, ly = pos["l"]
+            lx, ly = pos["l"][0], pos["w"][1]
             l_val = viewer.get("losses", 0)
             if l_val > 0:
                 l_txt = font_stat.render(str(l_val), True, (239, 83, 80))
@@ -197,7 +197,7 @@ while running:
             screen.blit(l_txt, l_txt.get_rect(center=(lx, ly)))
 
             # --- WINRATE ---
-            wrx, wry = pos["wr"]
+            wrx, wry = pos["wr"][0], pos["w"][1]
             total = w_val + l_val
             if total > 0:
                 wr_val = int((w_val / total * 100))
