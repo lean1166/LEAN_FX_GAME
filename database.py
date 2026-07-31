@@ -78,6 +78,13 @@ def init_db():
         "bot_cooldown": "300000",
         "bot_max_ops_hour": "4",
         "last_reset": datetime.now().strftime("%Y-%m"),
+        # Sistema de liquidez por likes (V2)
+        "liq_interval_min": "10",     # Cada cuantos minutos se dispara un evento
+        "liq_a_target": "100",        # Meta de likes para evento A (bloqueante)
+        "liq_c_base": "100",          # Meta likes del nivel 1 del evento C (nivel 2 y 3 son x2 y x4)
+        "liq_c_bonus_base": "500",    # Bono FXP del nivel 1 del evento C (nivel 2 y 3 son x2 y x4)
+        "liq_d_target": "150",        # Meta de likes para evento D (barra unica)
+        "liq_d_bonus": "800",         # Bono FXP del evento D
     }
     for key, value in defaults.items():
         c.execute('''INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)''', (key, value))

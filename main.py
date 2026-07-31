@@ -304,7 +304,6 @@ viewer_bot_last_time = 0
 # liquidez" y hace falta que el chat de TikTok dé likes para reponerla.
 # Rotan 3 tipos de evento en orden fijo: A (bloqueante) -> C (rondas por
 # nivel) -> D (barra unica) -> A -> C -> D ...
-LIQUIDITY_EVENT_INTERVAL = 30000  # PRUEBA: 30 segundos (para producción volver a 600000 = 10 minutos)
 LIQUIDITY_EVENT_TYPES = ["A", "C", "D"]
 liquidity_event_index = 0  # Indice dentro de LIQUIDITY_EVENT_TYPES
 liquidity_last_trigger = 0  # Momento (ms) del ultimo evento disparado (se fija al iniciar la partida)
@@ -314,14 +313,23 @@ liquidity_particles = []  # Particulas cyan decorativas durante el evento
 simulated_likes = 0
 SIMULATED_LIKES_PER_PRESS = 10
 
-# Config de cada tipo de evento
-LIQUIDITY_A_TARGET = 100        # Likes necesarios para reanudar (evento bloqueante)
-LIQUIDITY_A_TIMEOUT = 45000     # 45s: si no se llega a la meta, se reanuda igual (seguridad)
-LIQUIDITY_C_DURATION = 15000    # 15s de duracion
-LIQUIDITY_C_LEVELS = [(100, 500), (200, 1000), (400, 2000)]  # (likes, bono FXP)
-LIQUIDITY_D_DURATION = 20000    # 20s de duracion
-LIQUIDITY_D_TARGET = 150        # Meta unica para llenar la barra
-LIQUIDITY_D_BONUS = 800         # Bono si se llena la barra
+# Config de cada tipo de evento - se cargan desde la base de datos (ajustables
+# en vivo desde la pantalla de CONFIGURACION), con estos valores como default
+# la primera vez que se corre el juego.
+LIQUIDITY_EVENT_INTERVAL = int(get_config("liq_interval_min", "10")) * 60000  # minutos -> ms
+LIQUIDITY_A_TARGET = int(get_config("liq_a_target", "100"))        # Likes necesarios para reanudar (evento bloqueante)
+LIQUIDITY_A_TIMEOUT = 45000     # 45s: si no se llega a la meta, se reanuda igual (seguridad, no configurable)
+LIQUIDITY_C_DURATION = 15000    # 15s de duracion (no configurable)
+LIQUIDITY_C_BASE = int(get_config("liq_c_base", "100"))            # Meta likes del nivel 1 (nivel 2 y 3 son x2 y x4)
+LIQUIDITY_C_BONUS_BASE = int(get_config("liq_c_bonus_base", "500"))  # Bono FXP del nivel 1 (nivel 2 y 3 son x2 y x4)
+LIQUIDITY_C_LEVELS = [
+    (LIQUIDITY_C_BASE, LIQUIDITY_C_BONUS_BASE),
+    (LIQUIDITY_C_BASE * 2, LIQUIDITY_C_BONUS_BASE * 2),
+    (LIQUIDITY_C_BASE * 4, LIQUIDITY_C_BONUS_BASE * 4),
+]
+LIQUIDITY_D_DURATION = 20000    # 20s de duracion (no configurable)
+LIQUIDITY_D_TARGET = int(get_config("liq_d_target", "150"))        # Meta unica para llenar la barra
+LIQUIDITY_D_BONUS = int(get_config("liq_d_bonus", "800"))          # Bono si se llena la barra
 
 # --- CONEXIÓN TIKTOK LIVE ---
 tiktok_chat = TikTokChatReader(username="lean.fx1")
@@ -1263,6 +1271,13 @@ while app_running:
                 cfg_viewers_enabled = get_config("viewers_enabled", "1") == "1"
                 cfg_vol_music = int(get_config("vol_music", "30"))
                 cfg_vol_fx = int(get_config("vol_fx", "100"))
+                # --- Sistema de liquidez por likes ---
+                cfg_liq_interval = int(get_config("liq_interval_min", "10"))
+                cfg_liq_a_target = int(get_config("liq_a_target", "100"))
+                cfg_liq_c_base = int(get_config("liq_c_base", "100"))
+                cfg_liq_c_bonus_base = int(get_config("liq_c_bonus_base", "500"))
+                cfg_liq_d_target = int(get_config("liq_d_target", "150"))
+                cfg_liq_d_bonus = int(get_config("liq_d_bonus", "800"))
                 # Opciones de config
                 config_options = [
                     {"label": "Timer (segundos)", "key": "timer", "type": "number", "min": 3, "max": 30, "step": 1},
@@ -1273,6 +1288,13 @@ while app_running:
                     {"label": "Bots Viewers", "key": "viewers_enabled", "type": "toggle"},
                     {"label": "Volumen Musica %", "key": "vol_music", "type": "number", "min": 0, "max": 100, "step": 10},
                     {"label": "Volumen Efectos %", "key": "vol_fx", "type": "number", "min": 0, "max": 100, "step": 10},
+                    {"label": "-- LIQUIDEZ POR LIKES --", "key": "liq_header", "type": "header"},
+                    {"label": "Evento cada (minutos)", "key": "liq_interval", "type": "number", "min": 2, "max": 30, "step": 1},
+                    {"label": "Meta likes (Evento A)", "key": "liq_a_target", "type": "number", "min": 20, "max": 500, "step": 10},
+                    {"label": "Meta likes Nivel 1 (Evento C)", "key": "liq_c_base", "type": "number", "min": 20, "max": 300, "step": 10},
+                    {"label": "Bono FXP Nivel 1 (Evento C)", "key": "liq_c_bonus_base", "type": "number", "min": 100, "max": 2000, "step": 100},
+                    {"label": "Meta likes (Evento D)", "key": "liq_d_target", "type": "number", "min": 20, "max": 500, "step": 10},
+                    {"label": "Bono FXP (Evento D)", "key": "liq_d_bonus", "type": "number", "min": 100, "max": 3000, "step": 100},
                     {"label": "RESET RANKING", "key": "reset", "type": "button"},
                 ]
                 config_selected = 0  # Índice de opción seleccionada
@@ -1286,12 +1308,21 @@ while app_running:
                     cfg_title = font_cfg_title.render("CONFIGURACION", True, (0, 220, 255))
                     screen.blit(cfg_title, cfg_title.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.06))))
                     # Dibujar opciones
-                    font_cfg_label = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
-                    font_cfg_val = pygame.font.SysFont("Arial", int(SCREEN_H * 0.024), bold=True)
-                    opt_start_y = int(SCREEN_H * 0.15)
-                    opt_h = int(SCREEN_H * 0.07)
+                    # Alto de fila dinamico: con muchas opciones (ahora hay ~15 con la
+                    # seccion de liquidez por likes) se achica para que entren todas
+                    opt_start_y = int(SCREEN_H * 0.12)
+                    opt_h = min(int(SCREEN_H * 0.07), int((SCREEN_H * 0.83) / max(1, len(config_options))))
+                    font_cfg_label_size = min(int(SCREEN_H * 0.022), int(opt_h * 0.34))
+                    font_cfg_val_size = min(int(SCREEN_H * 0.024), int(opt_h * 0.36))
+                    font_cfg_label = pygame.font.SysFont("Arial", font_cfg_label_size, bold=True)
+                    font_cfg_val = pygame.font.SysFont("Arial", font_cfg_val_size, bold=True)
                     for idx, opt in enumerate(config_options):
                         oy = opt_start_y + (idx * opt_h)
+                        if opt["type"] == "header":
+                            # Separador de seccion: sin fondo destacado, no seleccionable
+                            lbl = font_cfg_label.render(opt["label"], True, (0, 220, 255))
+                            screen.blit(lbl, lbl.get_rect(center=(SCREEN_W // 2, oy + (opt_h - 4) // 2)))
+                            continue
                         # Fondo de fila (highlight si seleccionada)
                         row_bg = pygame.Surface((int(SCREEN_W * 0.60), opt_h - 4), pygame.SRCALPHA)
                         if idx == config_selected:
@@ -1316,6 +1347,12 @@ while app_running:
                             elif opt["key"] == "bot_wr": val = cfg_bot_wr
                             elif opt["key"] == "vol_music": val = cfg_vol_music
                             elif opt["key"] == "vol_fx": val = cfg_vol_fx
+                            elif opt["key"] == "liq_interval": val = cfg_liq_interval
+                            elif opt["key"] == "liq_a_target": val = cfg_liq_a_target
+                            elif opt["key"] == "liq_c_base": val = cfg_liq_c_base
+                            elif opt["key"] == "liq_c_bonus_base": val = cfg_liq_c_bonus_base
+                            elif opt["key"] == "liq_d_target": val = cfg_liq_d_target
+                            elif opt["key"] == "liq_d_bonus": val = cfg_liq_d_bonus
                             else: val = 0
                             if opt["key"] == "tp_mult":
                                 val_str = f"1:{val:.1f}"
@@ -1391,6 +1428,12 @@ while app_running:
                                     _set_cfg("viewers_enabled", "1" if cfg_viewers_enabled else "0")
                                     _set_cfg("vol_music", str(cfg_vol_music))
                                     _set_cfg("vol_fx", str(cfg_vol_fx))
+                                    _set_cfg("liq_interval_min", str(cfg_liq_interval))
+                                    _set_cfg("liq_a_target", str(cfg_liq_a_target))
+                                    _set_cfg("liq_c_base", str(cfg_liq_c_base))
+                                    _set_cfg("liq_c_bonus_base", str(cfg_liq_c_bonus_base))
+                                    _set_cfg("liq_d_target", str(cfg_liq_d_target))
+                                    _set_cfg("liq_d_bonus", str(cfg_liq_d_bonus))
                                     # Aplicar al juego
                                     TIMER_DURATION = cfg_timer * 1000
                                     TRADE_RISK = cfg_risk
@@ -1398,6 +1441,15 @@ while app_running:
                                     BOT_ENABLED = cfg_bot_enabled
                                     BOT_WIN_RATE = cfg_bot_wr / 100.0
                                     VIEWER_BOTS_ENABLED = cfg_viewers_enabled
+                                    LIQUIDITY_EVENT_INTERVAL = cfg_liq_interval * 60000
+                                    LIQUIDITY_A_TARGET = cfg_liq_a_target
+                                    LIQUIDITY_C_LEVELS = [
+                                        (cfg_liq_c_base, cfg_liq_c_bonus_base),
+                                        (cfg_liq_c_base * 2, cfg_liq_c_bonus_base * 2),
+                                        (cfg_liq_c_base * 4, cfg_liq_c_bonus_base * 4),
+                                    ]
+                                    LIQUIDITY_D_TARGET = cfg_liq_d_target
+                                    LIQUIDITY_D_BONUS = cfg_liq_d_bonus
                                     if sound_game_music is not None:
                                         sound_game_music.set_volume(cfg_vol_music / 100.0)
                                     if music_playing:
@@ -1417,8 +1469,12 @@ while app_running:
                                     in_config = False
                                 elif cfg_event.key == pygame.K_DOWN:
                                     config_selected = (config_selected + 1) % len(config_options)
+                                    while config_options[config_selected]["type"] == "header":
+                                        config_selected = (config_selected + 1) % len(config_options)
                                 elif cfg_event.key == pygame.K_UP:
                                     config_selected = (config_selected - 1) % len(config_options)
+                                    while config_options[config_selected]["type"] == "header":
+                                        config_selected = (config_selected - 1) % len(config_options)
                                 elif cfg_event.key in (pygame.K_LEFT, pygame.K_RIGHT):
                                     opt = config_options[config_selected]
                                     direction = 1 if cfg_event.key == pygame.K_RIGHT else -1
@@ -1435,6 +1491,18 @@ while app_running:
                                             cfg_vol_music = max(opt["min"], min(opt["max"], cfg_vol_music + opt["step"] * direction))
                                         elif opt["key"] == "vol_fx":
                                             cfg_vol_fx = max(opt["min"], min(opt["max"], cfg_vol_fx + opt["step"] * direction))
+                                        elif opt["key"] == "liq_interval":
+                                            cfg_liq_interval = max(opt["min"], min(opt["max"], cfg_liq_interval + opt["step"] * direction))
+                                        elif opt["key"] == "liq_a_target":
+                                            cfg_liq_a_target = max(opt["min"], min(opt["max"], cfg_liq_a_target + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c_base":
+                                            cfg_liq_c_base = max(opt["min"], min(opt["max"], cfg_liq_c_base + opt["step"] * direction))
+                                        elif opt["key"] == "liq_c_bonus_base":
+                                            cfg_liq_c_bonus_base = max(opt["min"], min(opt["max"], cfg_liq_c_bonus_base + opt["step"] * direction))
+                                        elif opt["key"] == "liq_d_target":
+                                            cfg_liq_d_target = max(opt["min"], min(opt["max"], cfg_liq_d_target + opt["step"] * direction))
+                                        elif opt["key"] == "liq_d_bonus":
+                                            cfg_liq_d_bonus = max(opt["min"], min(opt["max"], cfg_liq_d_bonus + opt["step"] * direction))
                                     elif opt["type"] == "toggle":
                                         if opt["key"] == "bot_enabled":
                                             cfg_bot_enabled = not cfg_bot_enabled
