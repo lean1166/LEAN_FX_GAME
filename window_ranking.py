@@ -45,7 +45,7 @@ if panel_path:
     panel_img_raw = pygame.image.load(panel_path)
 
 # --- Posicionar la ventana (con margen para que la barra de titulo sea accesible) ---
-os.environ['SDL_VIDEO_WINDOW_POS'] = "100,50"
+os.environ['SDL_VIDEO_WINDOW_POS'] = "200,200"
 
 screen = pygame.display.set_mode((WINDOW_W, WINDOW_H))
 pygame.display.set_caption("LEAN FX - TOP 5 RANKING")
