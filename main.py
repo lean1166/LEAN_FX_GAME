@@ -1652,6 +1652,10 @@ while app_running:
             _real_likes = tiktok_chat.get_like_count() if tiktok_chat is not None else 0
             _current_likes = _real_likes + simulated_likes
 
+            if not hasattr(pygame, '_liq_candle_debug') or current_time - getattr(pygame, '_liq_candle_debug', 0) > 2000:
+                pygame._liq_candle_debug = current_time
+                print(f"[DEBUG VELAS] len(candles)={len(candles)} current_candle_close={current_candle['close']:.2f}")
+
             if _ev["type"] == "A":
                 # Evento bloqueante: nada de trading hasta juntar la meta o hasta el timeout de seguridad
                 if _current_likes >= LIQUIDITY_A_TARGET or _elapsed >= LIQUIDITY_A_TIMEOUT:
