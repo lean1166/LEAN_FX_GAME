@@ -53,6 +53,9 @@ sound_fractal = load_sound("FRACTAL.mp3")
 sound_win = load_sound("WIN.mp3")
 sound_loss = load_sound("LOSS.mp3")
 sound_zoom = load_sound("ZOOM.mp3")
+sound_liquidity_start = load_sound("LIQUIDITY_START.mp3")   # Arranca un evento de likes
+sound_like_milestone = load_sound("LIKE_MILESTONE.mp3")     # Se alcanza un nivel/meta
+sound_liquidity_success = load_sound("LIQUIDITY_SUCCESS.mp3")  # Bono pagado con exito
 sound_tick = load_sound("TICK.mp3")
 sound_ambient = load_sound("AMBIENT.mp3")
 sound_game_music = load_sound("GAME_MUSIC.mp3")
@@ -306,6 +309,7 @@ LIQUIDITY_EVENT_TYPES = ["A", "C", "D"]
 liquidity_event_index = 0  # Indice dentro de LIQUIDITY_EVENT_TYPES
 liquidity_last_trigger = 0  # Momento (ms) del ultimo evento disparado (se fija al iniciar la partida)
 liquidity_event_active = None  # None o dict con info del evento en curso
+liquidity_particles = []  # Particulas cyan decorativas durante el evento
 # Simulador de likes para pruebas sin estar en vivo (tecla L)
 simulated_likes = 0
 SIMULATED_LIKES_PER_PRESS = 10
@@ -1639,6 +1643,13 @@ while app_running:
             simulated_likes = 0
             if tiktok_chat is not None:
                 tiktok_chat.reset_like_count()
+            liquidity_particles = [
+                {"x": random.uniform(0, SCREEN_W), "y": random.uniform(0, SCREEN_H),
+                 "speed": random.uniform(0.4, 1.4), "size": random.randint(2, 5),
+                 "alpha": random.randint(60, 160)}
+                for _ in range(35)
+            ]
+            play_sound(sound_liquidity_start)
             if event_type == "A":
                 liquidity_event_active = {"type": "A", "start_time": current_time}
             elif event_type == "C":
@@ -1652,13 +1663,13 @@ while app_running:
             _real_likes = tiktok_chat.get_like_count() if tiktok_chat is not None else 0
             _current_likes = _real_likes + simulated_likes
 
-            if not hasattr(pygame, '_liq_candle_debug') or current_time - getattr(pygame, '_liq_candle_debug', 0) > 2000:
-                pygame._liq_candle_debug = current_time
-                print(f"[DEBUG VELAS] len(candles)={len(candles)} current_candle_close={current_candle['close']:.2f}")
-
             if _ev["type"] == "A":
                 # Evento bloqueante: nada de trading hasta juntar la meta o hasta el timeout de seguridad
-                if _current_likes >= LIQUIDITY_A_TARGET or _elapsed >= LIQUIDITY_A_TIMEOUT:
+                if _current_likes >= LIQUIDITY_A_TARGET:
+                    play_sound(sound_liquidity_success)
+                    liquidity_event_active = None
+                    last_candle_time = current_time
+                elif _elapsed >= LIQUIDITY_A_TIMEOUT:
                     liquidity_event_active = None
                     last_candle_time = current_time
             elif _ev["type"] == "C":
@@ -1666,11 +1677,14 @@ while app_running:
                 for lvl_idx, (lvl_likes, lvl_bonus) in enumerate(LIQUIDITY_C_LEVELS):
                     if _current_likes >= lvl_likes and lvl_idx > _ev["reached_level"]:
                         _ev["reached_level"] = lvl_idx
+                        _ev["flash_start"] = current_time  # Para el flash visual del nivel nuevo
+                        play_sound(sound_like_milestone)
                 if _elapsed >= LIQUIDITY_C_DURATION:
                     if _ev["reached_level"] >= 0:
                         _bonus = LIQUIDITY_C_LEVELS[_ev["reached_level"]][1]
                         add_bonus_to_all_players(_bonus)
                         top_viewers = load_top_viewers()
+                        play_sound(sound_liquidity_success)
                     liquidity_event_active = None
                     last_candle_time = current_time
             elif _ev["type"] == "D":
@@ -1678,6 +1692,7 @@ while app_running:
                 if _current_likes >= LIQUIDITY_D_TARGET:
                     add_bonus_to_all_players(LIQUIDITY_D_BONUS)
                     top_viewers = load_top_viewers()
+                    play_sound(sound_liquidity_success)
                     liquidity_event_active = None
                     last_candle_time = current_time
                 elif _elapsed >= LIQUIDITY_D_DURATION:
@@ -2513,64 +2528,100 @@ while app_running:
             _real_likes = tiktok_chat.get_like_count() if tiktok_chat is not None else 0
             _current_likes = _real_likes + simulated_likes
 
+            # Fondo casi solido (oscurece bastante mas que antes para que el texto resalte)
             liq_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-            liq_overlay.fill((0, 0, 0, 190))
+            liq_overlay.fill((3, 5, 10, 235))
             screen.blit(liq_overlay, (0, 0))
 
-            font_liq_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.045), bold=True)
+            # --- Particulas cyan decorativas (le dan vida al fondo negro) ---
+            for p in liquidity_particles:
+                p["y"] -= p["speed"]
+                if p["y"] < -5:
+                    p["y"] = SCREEN_H + 5
+                    p["x"] = random.uniform(0, SCREEN_W)
+                ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
+                pygame.draw.circle(ps, (0, 210, 255, p["alpha"]), (p["size"], p["size"]), p["size"])
+                screen.blit(ps, (int(p["x"]), int(p["y"])))
+
+            # --- Logo / marca LEAN FX arriba del cartel ---
+            font_liq_brand = pygame.font.SysFont("Arial", int(SCREEN_H * 0.024), bold=True)
+            brand_y = int(SCREEN_H * 0.10)
+            if avatar_img is not None:
+                brand_av_size = int(SCREEN_H * 0.07)
+                brand_av = pygame.transform.smoothscale(avatar_img, (brand_av_size, brand_av_size))
+                brand_txt = font_liq_brand.render("LEAN FX", True, (0, 220, 255))
+                total_w = brand_av_size + 10 + brand_txt.get_width()
+                bx = SCREEN_W // 2 - total_w // 2
+                screen.blit(brand_av, (bx, brand_y - brand_av_size // 2))
+                screen.blit(brand_txt, (bx + brand_av_size + 10, brand_y - brand_txt.get_height() // 2))
+            else:
+                brand_txt = font_liq_brand.render("LEAN FX", True, (0, 220, 255))
+                screen.blit(brand_txt, brand_txt.get_rect(center=(SCREEN_W // 2, brand_y)))
+
+            font_liq_title = pygame.font.SysFont("Arial", int(SCREEN_H * 0.048), bold=True)
             font_liq_sub = pygame.font.SysFont("Arial", int(SCREEN_H * 0.022), bold=True)
-            font_liq_count = pygame.font.SysFont("Arial", int(SCREEN_H * 0.08), bold=True)
+            font_liq_count = pygame.font.SysFont("Arial", int(SCREEN_H * 0.085), bold=True)
 
             if _ev["type"] == "A":
                 title_txt = font_liq_title.render("SIN LIQUIDEZ EN EL MERCADO", True, (255, 60, 60))
-                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.32))))
+                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.30))))
                 sub_txt = font_liq_sub.render("PARA CONTINUAR, DEN LIKES A LA PANTALLA", True, (255, 220, 0))
-                screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.38))))
                 count_txt = font_liq_count.render(f"{_current_likes} / {LIQUIDITY_A_TARGET}", True, (255, 255, 255))
-                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.50))))
-                bar_w = int(SCREEN_W * 0.4)
-                bar_h = int(SCREEN_H * 0.03)
+                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.49))))
+                # Barra mas grande (era 0.4 ancho x 0.03 alto, ahora 0.55 x 0.05 - foco visual principal)
+                bar_w = int(SCREEN_W * 0.55)
+                bar_h = int(SCREEN_H * 0.05)
                 bar_x = SCREEN_W // 2 - bar_w // 2
                 bar_y = int(SCREEN_H * 0.58)
-                pygame.draw.rect(screen, (40, 40, 50), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
+                pygame.draw.rect(screen, (30, 32, 42), (bar_x, bar_y, bar_w, bar_h), border_radius=10)
                 fill_pct = min(1.0, _current_likes / LIQUIDITY_A_TARGET)
-                pygame.draw.rect(screen, (0, 220, 255), (bar_x, bar_y, int(bar_w * fill_pct), bar_h), border_radius=6)
-                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=6)
+                if fill_pct > 0:
+                    pygame.draw.rect(screen, (0, 220, 255), (bar_x, bar_y, int(bar_w * fill_pct), bar_h), border_radius=10)
+                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=10)
                 remaining_s = max(0, (LIQUIDITY_A_TIMEOUT - _elapsed) // 1000)
                 timeout_txt = font_liq_sub.render(f"Reanuda automaticamente en {remaining_s}s", True, (150, 150, 160))
-                screen.blit(timeout_txt, timeout_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.65))))
+                screen.blit(timeout_txt, timeout_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.68))))
 
             elif _ev["type"] == "C":
                 title_txt = font_liq_title.render("RONDA DE LIKES", True, (0, 220, 255))
-                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.28))))
+                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.26))))
                 count_txt = font_liq_count.render(f"{_current_likes}", True, (255, 255, 255))
-                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
+                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.38))))
                 lvl_y = int(SCREEN_H * 0.50)
+                _flash_start = _ev.get("flash_start")
                 for lvl_idx, (lvl_likes, lvl_bonus) in enumerate(LIQUIDITY_C_LEVELS):
                     reached = lvl_idx <= _ev["reached_level"]
-                    lvl_color = (38, 200, 154) if reached else (120, 120, 130)
-                    lvl_txt = font_liq_sub.render(f"{lvl_likes} likes -> +{lvl_bonus} FXP para todos", True, lvl_color)
-                    screen.blit(lvl_txt, lvl_txt.get_rect(center=(SCREEN_W // 2, lvl_y + lvl_idx * int(SCREEN_H * 0.04))))
+                    # Flash: el nivel recien alcanzado crece y brilla un instante
+                    is_new = reached and lvl_idx == _ev["reached_level"] and _flash_start is not None and current_time - _flash_start < 600
+                    lvl_color = (38, 220, 170) if reached else (120, 120, 130)
+                    lvl_size = int(SCREEN_H * (0.026 if is_new else 0.022))
+                    font_lvl = pygame.font.SysFont("Arial", lvl_size, bold=True)
+                    prefix = "\u2713 " if reached else ""
+                    lvl_txt = font_lvl.render(f"{prefix}{lvl_likes} likes -> +{lvl_bonus} FXP para todos", True, lvl_color)
+                    screen.blit(lvl_txt, lvl_txt.get_rect(center=(SCREEN_W // 2, lvl_y + lvl_idx * int(SCREEN_H * 0.045))))
                 remaining_s = max(0, (LIQUIDITY_C_DURATION - _elapsed) / 1000)
                 timer_txt = font_liq_sub.render(f"{remaining_s:.1f}s", True, (255, 220, 0))
-                screen.blit(timer_txt, timer_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.68))))
+                screen.blit(timer_txt, timer_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.70))))
 
             elif _ev["type"] == "D":
                 title_txt = font_liq_title.render("LLENEN LA BARRA DE LIKES", True, (255, 220, 0))
-                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.30))))
+                screen.blit(title_txt, title_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.28))))
                 sub_txt = font_liq_sub.render(f"Meta: {LIQUIDITY_D_TARGET} likes -> +{LIQUIDITY_D_BONUS} FXP para todos", True, (0, 220, 255))
-                screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.40))))
-                bar_w = int(SCREEN_W * 0.5)
-                bar_h = int(SCREEN_H * 0.05)
+                screen.blit(sub_txt, sub_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.37))))
+                # Barra mas grande (era 0.5 ancho x 0.05 alto, ahora 0.6 x 0.07)
+                bar_w = int(SCREEN_W * 0.6)
+                bar_h = int(SCREEN_H * 0.07)
                 bar_x = SCREEN_W // 2 - bar_w // 2
-                bar_y = int(SCREEN_H * 0.48)
-                pygame.draw.rect(screen, (40, 40, 50), (bar_x, bar_y, bar_w, bar_h), border_radius=8)
+                bar_y = int(SCREEN_H * 0.46)
+                pygame.draw.rect(screen, (30, 32, 42), (bar_x, bar_y, bar_w, bar_h), border_radius=12)
                 fill_pct = min(1.0, _current_likes / LIQUIDITY_D_TARGET)
-                bar_color = (38, 200, 154) if fill_pct >= 1.0 else (255, 180, 0)
-                pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_w * fill_pct), bar_h), border_radius=8)
-                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=8)
+                bar_color = (38, 220, 170) if fill_pct >= 1.0 else (255, 180, 0)
+                if fill_pct > 0:
+                    pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_w * fill_pct), bar_h), border_radius=12)
+                pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=12)
                 count_txt = font_liq_sub.render(f"{_current_likes} / {LIQUIDITY_D_TARGET}", True, (255, 255, 255))
-                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, bar_y + bar_h + int(SCREEN_H * 0.04))))
+                screen.blit(count_txt, count_txt.get_rect(center=(SCREEN_W // 2, bar_y + bar_h + int(SCREEN_H * 0.045))))
                 remaining_s = max(0, (LIQUIDITY_D_DURATION - _elapsed) / 1000)
                 timer_txt = font_liq_sub.render(f"{remaining_s:.1f}s", True, (200, 200, 210))
                 screen.blit(timer_txt, timer_txt.get_rect(center=(SCREEN_W // 2, int(SCREEN_H * 0.68))))
