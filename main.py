@@ -301,7 +301,7 @@ viewer_bot_last_time = 0
 # liquidez" y hace falta que el chat de TikTok dé likes para reponerla.
 # Rotan 3 tipos de evento en orden fijo: A (bloqueante) -> C (rondas por
 # nivel) -> D (barra unica) -> A -> C -> D ...
-LIQUIDITY_EVENT_INTERVAL = 600000  # 10 minutos en ms
+LIQUIDITY_EVENT_INTERVAL = 30000  # PRUEBA: 30 segundos (para producción volver a 600000 = 10 minutos)
 LIQUIDITY_EVENT_TYPES = ["A", "C", "D"]
 liquidity_event_index = 0  # Indice dentro de LIQUIDITY_EVENT_TYPES
 liquidity_last_trigger = 0  # Momento (ms) del ultimo evento disparado (se fija al iniciar la partida)
